@@ -1,5 +1,399 @@
-webpackJsonp([0],[
+webpackJsonp([4],[
 /* 0 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports) {
+
+/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+// css base code, injected by the css-loader
+module.exports = function() {
+	var list = [];
+
+	// return the list of modules as css string
+	list.toString = function toString() {
+		var result = [];
+		for(var i = 0; i < this.length; i++) {
+			var item = this[i];
+			if(item[2]) {
+				result.push("@media " + item[2] + "{" + item[1] + "}");
+			} else {
+				result.push(item[1]);
+			}
+		}
+		return result.join("");
+	};
+
+	// import a list of modules into the list
+	list.i = function(modules, mediaQuery) {
+		if(typeof modules === "string")
+			modules = [[null, modules, ""]];
+		var alreadyImportedModules = {};
+		for(var i = 0; i < this.length; i++) {
+			var id = this[i][0];
+			if(typeof id === "number")
+				alreadyImportedModules[id] = true;
+		}
+		for(i = 0; i < modules.length; i++) {
+			var item = modules[i];
+			// skip already imported module
+			// this implementation is not 100% perfect for weird media query combinations
+			//  when a module is imported multiple times with different media queries.
+			//  I hope this will never occur (Hey this way we have smaller bundles)
+			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
+				if(mediaQuery && !item[2]) {
+					item[2] = mediaQuery;
+				} else if(mediaQuery) {
+					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
+				}
+				list.push(item);
+			}
+		}
+	};
+	return list;
+};
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports) {
+
+/* globals __VUE_SSR_CONTEXT__ */
+
+// this module is a runtime utility for cleaner component module output and will
+// be included in the final webpack user bundle
+
+module.exports = function normalizeComponent (
+  rawScriptExports,
+  compiledTemplate,
+  injectStyles,
+  scopeId,
+  moduleIdentifier /* server only */
+) {
+  var esModule
+  var scriptExports = rawScriptExports = rawScriptExports || {}
+
+  // ES6 modules interop
+  var type = typeof rawScriptExports.default
+  if (type === 'object' || type === 'function') {
+    esModule = rawScriptExports
+    scriptExports = rawScriptExports.default
+  }
+
+  // Vue.extend constructor export interop
+  var options = typeof scriptExports === 'function'
+    ? scriptExports.options
+    : scriptExports
+
+  // render functions
+  if (compiledTemplate) {
+    options.render = compiledTemplate.render
+    options.staticRenderFns = compiledTemplate.staticRenderFns
+  }
+
+  // scopedId
+  if (scopeId) {
+    options._scopeId = scopeId
+  }
+
+  var hook
+  if (moduleIdentifier) { // server build
+    hook = function (context) {
+      // 2.3 injection
+      context = context || (this.$vnode && this.$vnode.ssrContext)
+      // 2.2 with runInNewContext: true
+      if (!context && typeof __VUE_SSR_CONTEXT__ !== 'undefined') {
+        context = __VUE_SSR_CONTEXT__
+      }
+      // inject component styles
+      if (injectStyles) {
+        injectStyles.call(this, context)
+      }
+      // register component module identifier for async chunk inferrence
+      if (context && context._registeredComponents) {
+        context._registeredComponents.add(moduleIdentifier)
+      }
+    }
+    // used by ssr in case component is cached and beforeCreate
+    // never gets called
+    options._ssrRegister = hook
+  } else if (injectStyles) {
+    hook = injectStyles
+  }
+
+  if (hook) {
+    // inject component registration as beforeCreate hook
+    var existing = options.beforeCreate
+    options.beforeCreate = existing
+      ? [].concat(existing, hook)
+      : [hook]
+  }
+
+  return {
+    esModule: esModule,
+    exports: scriptExports,
+    options: options
+  }
+}
+
+
+/***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
+  Modified by Evan You @yyx990803
+*/
+
+var hasDocument = typeof document !== 'undefined'
+
+if (typeof DEBUG !== 'undefined' && DEBUG) {
+  if (!hasDocument) {
+    throw new Error(
+    'vue-style-loader cannot be used in a non-browser environment. ' +
+    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
+  ) }
+}
+
+var listToStyles = __webpack_require__(33)
+
+/*
+type StyleObject = {
+  id: number;
+  parts: Array<StyleObjectPart>
+}
+
+type StyleObjectPart = {
+  css: string;
+  media: string;
+  sourceMap: ?string
+}
+*/
+
+var stylesInDom = {/*
+  [id: number]: {
+    id: number,
+    refs: number,
+    parts: Array<(obj?: StyleObjectPart) => void>
+  }
+*/}
+
+var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
+var singletonElement = null
+var singletonCounter = 0
+var isProduction = false
+var noop = function () {}
+var options = null
+var ssrIdKey = 'data-vue-ssr-id'
+
+// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
+// tags it will allow on a page
+var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
+
+module.exports = function (parentId, list, _isProduction, _options) {
+  isProduction = _isProduction
+
+  options = _options || {}
+
+  var styles = listToStyles(parentId, list)
+  addStylesToDom(styles)
+
+  return function update (newList) {
+    var mayRemove = []
+    for (var i = 0; i < styles.length; i++) {
+      var item = styles[i]
+      var domStyle = stylesInDom[item.id]
+      domStyle.refs--
+      mayRemove.push(domStyle)
+    }
+    if (newList) {
+      styles = listToStyles(parentId, newList)
+      addStylesToDom(styles)
+    } else {
+      styles = []
+    }
+    for (var i = 0; i < mayRemove.length; i++) {
+      var domStyle = mayRemove[i]
+      if (domStyle.refs === 0) {
+        for (var j = 0; j < domStyle.parts.length; j++) {
+          domStyle.parts[j]()
+        }
+        delete stylesInDom[domStyle.id]
+      }
+    }
+  }
+}
+
+function addStylesToDom (styles /* Array<StyleObject> */) {
+  for (var i = 0; i < styles.length; i++) {
+    var item = styles[i]
+    var domStyle = stylesInDom[item.id]
+    if (domStyle) {
+      domStyle.refs++
+      for (var j = 0; j < domStyle.parts.length; j++) {
+        domStyle.parts[j](item.parts[j])
+      }
+      for (; j < item.parts.length; j++) {
+        domStyle.parts.push(addStyle(item.parts[j]))
+      }
+      if (domStyle.parts.length > item.parts.length) {
+        domStyle.parts.length = item.parts.length
+      }
+    } else {
+      var parts = []
+      for (var j = 0; j < item.parts.length; j++) {
+        parts.push(addStyle(item.parts[j]))
+      }
+      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
+    }
+  }
+}
+
+function createStyleElement () {
+  var styleElement = document.createElement('style')
+  styleElement.type = 'text/css'
+  head.appendChild(styleElement)
+  return styleElement
+}
+
+function addStyle (obj /* StyleObjectPart */) {
+  var update, remove
+  var styleElement = document.querySelector('style[' + ssrIdKey + '~="' + obj.id + '"]')
+
+  if (styleElement) {
+    if (isProduction) {
+      // has SSR styles and in production mode.
+      // simply do nothing.
+      return noop
+    } else {
+      // has SSR styles but in dev mode.
+      // for some reason Chrome can't handle source map in server-rendered
+      // style tags - source maps in <style> only works if the style tag is
+      // created and inserted dynamically. So we remove the server rendered
+      // styles and inject new ones.
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  if (isOldIE) {
+    // use singleton mode for IE9.
+    var styleIndex = singletonCounter++
+    styleElement = singletonElement || (singletonElement = createStyleElement())
+    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
+    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
+  } else {
+    // use multi-style-tag mode in all other cases
+    styleElement = createStyleElement()
+    update = applyToTag.bind(null, styleElement)
+    remove = function () {
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  update(obj)
+
+  return function updateStyle (newObj /* StyleObjectPart */) {
+    if (newObj) {
+      if (newObj.css === obj.css &&
+          newObj.media === obj.media &&
+          newObj.sourceMap === obj.sourceMap) {
+        return
+      }
+      update(obj = newObj)
+    } else {
+      remove()
+    }
+  }
+}
+
+var replaceText = (function () {
+  var textStore = []
+
+  return function (index, replacement) {
+    textStore[index] = replacement
+    return textStore.filter(Boolean).join('\n')
+  }
+})()
+
+function applyToSingletonTag (styleElement, index, remove, obj) {
+  var css = remove ? '' : obj.css
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = replaceText(index, css)
+  } else {
+    var cssNode = document.createTextNode(css)
+    var childNodes = styleElement.childNodes
+    if (childNodes[index]) styleElement.removeChild(childNodes[index])
+    if (childNodes.length) {
+      styleElement.insertBefore(cssNode, childNodes[index])
+    } else {
+      styleElement.appendChild(cssNode)
+    }
+  }
+}
+
+function applyToTag (styleElement, obj) {
+  var css = obj.css
+  var media = obj.media
+  var sourceMap = obj.sourceMap
+
+  if (media) {
+    styleElement.setAttribute('media', media)
+  }
+  if (options.ssrId) {
+    styleElement.setAttribute(ssridKey, obj.id)
+  }
+
+  if (sourceMap) {
+    // https://developer.chrome.com/devtools/docs/javascript-debugging
+    // this makes source maps inside style tags work properly in Chrome
+    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
+    // http://stackoverflow.com/a/26603875
+    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
+  }
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = css
+  } else {
+    while (styleElement.firstChild) {
+      styleElement.removeChild(styleElement.firstChild)
+    }
+    styleElement.appendChild(document.createTextNode(css))
+  }
+}
+
+
+/***/ }),
+/* 4 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -189,37 +583,10 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 1 */
-/***/ (function(module, exports) {
-
-var g;
-
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
-
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || Function("return this")() || (1,eval)("this");
-} catch(e) {
-	// This works if the window reference is available
-	if(typeof window === "object")
-		g = window;
-}
-
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
-
-module.exports = g;
-
-
-/***/ }),
-/* 2 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var apply = Function.prototype.apply;
+/* WEBPACK VAR INJECTION */(function(global) {var apply = Function.prototype.apply;
 
 // DOM APIs, for completeness
 
@@ -269,13 +636,21 @@ exports._unrefActive = exports.active = function(item) {
 };
 
 // setimmediate attaches itself to the global object
-__webpack_require__(15);
-exports.setImmediate = setImmediate;
-exports.clearImmediate = clearImmediate;
+__webpack_require__(24);
+// On some exotic environments, it's not clear which object `setimmeidate` was
+// able to install onto.  Search each possibility in the same order as the
+// `setimmediate` library.
+exports.setImmediate = (typeof self !== "undefined" && self.setImmediate) ||
+                       (typeof global !== "undefined" && global.setImmediate) ||
+                       (this && this.setImmediate);
+exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
+                         (typeof global !== "undefined" && global.clearImmediate) ||
+                         (this && this.clearImmediate);
 
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 3 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -285,62 +660,59 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _Card = __webpack_require__(52);
+var _Card = __webpack_require__(26);
 
 var _Card2 = _interopRequireDefault(_Card);
 
-var _Carousel = __webpack_require__(53);
-
-var _Carousel2 = _interopRequireDefault(_Carousel);
-
-var _Msgbox = __webpack_require__(54);
-
-var _Msgbox2 = _interopRequireDefault(_Msgbox);
-
-var _Slider = __webpack_require__(55);
-
-var _Slider2 = _interopRequireDefault(_Slider);
-
-var _UcGallery = __webpack_require__(56);
-
-var _UcGallery2 = _interopRequireDefault(_UcGallery);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Carousel = function Carousel() {
+  return __webpack_require__.e/* import() */(3).then(__webpack_require__.bind(null, 34));
+};
+var Msgbox = function Msgbox() {
+  return __webpack_require__.e/* import() */(0).then(__webpack_require__.bind(null, 35));
+};
+var Slider = function Slider() {
+  return __webpack_require__.e/* import() */(1).then(__webpack_require__.bind(null, 36));
+};
+var UcGallery = function UcGallery() {
+  return __webpack_require__.e/* import() */(2).then(__webpack_require__.bind(null, 37));
+};
 
 exports.default = [{
   path: '/card',
   component: _Card2.default
 }, {
   path: '/carousel',
-  component: _Carousel2.default
+  component: Carousel
 }, {
   path: '/msgbox',
-  component: _Msgbox2.default
+  component: Msgbox
 }, {
   path: '/slider',
-  component: _Slider2.default
+  component: Slider
 }, {
   path: '/uc-gallery',
-  component: _UcGallery2.default
+  component: UcGallery
 }, {
   path: '/',
   redirect: '/card'
 }];
 
 /***/ }),
-/* 4 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-__webpack_require__(9);
+__webpack_require__(16);
 
-__webpack_require__(10);
+__webpack_require__(17);
 
-__webpack_require__(14);
+__webpack_require__(23);
 
-__webpack_require__(11);
+__webpack_require__(19);
 
 // pc触摸事件兼容
 // polyfill
@@ -353,7 +725,7 @@ if (!('ontouchend' in document)) {
 // 扩展Object对象
 
 /***/ }),
-/* 5 */
+/* 8 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2982,10 +3354,10 @@ if (inBrowser && window.Vue) {
 
 /* harmony default export */ __webpack_exports__["default"] = (VueRouter);
 
-/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(0)))
+/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(4)))
 
 /***/ }),
-/* 6 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, setImmediate) {/*!
@@ -13787,27 +14159,798 @@ return Vue$3;
 
 })));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(1), __webpack_require__(2).setImmediate))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0), __webpack_require__(5).setImmediate))
 
 /***/ }),
-/* 7 */,
-/* 8 */
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+function injectStyle (ssrContext) {
+  if (disposed) return
+  __webpack_require__(31)
+}
+var Component = __webpack_require__(2)(
+  /* script */
+  __webpack_require__(13),
+  /* template */
+  __webpack_require__(28),
+  /* styles */
+  injectStyle,
+  /* scopeId */
+  null,
+  /* moduleIdentifier (server only) */
+  null
+)
+Component.options.__file = "/Users/soneway/Sites/test/vuex/src/component/PiCarousel.vue"
+if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
+if (Component.options.functional) {console.error("[vue-loader] PiCarousel.vue: functional components are not supported with templates, they should use render functions.")}
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-3eefac56", Component.options)
+  } else {
+    hotAPI.reload("data-v-3eefac56", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-__webpack_require__(4);
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 
-var _vue = __webpack_require__(6);
+// 获取图片数据
+var getImgs = function () {
+  var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    var rs, articles;
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            _context.next = 2;
+            return get('/iflow/api/v1/channel/100?method=new');
+
+          case 2:
+            rs = _context.sent;
+
+            if (rs) {
+              _context.next = 5;
+              break;
+            }
+
+            return _context.abrupt('return');
+
+          case 5:
+            articles = Object.getValByPath(rs, 'data.articles', {});
+            return _context.abrupt('return', Object.keys(articles).map(function (key) {
+              return Object.getValByPath(articles, key + '.images.0.url');
+            }).filter(function (item) {
+              return item;
+            }));
+
+          case 7:
+          case 'end':
+            return _context.stop();
+        }
+      }
+    }, _callee, this);
+  }));
+
+  return function getImgs() {
+    return _ref.apply(this, arguments);
+  };
+}();
+
+var _jsonp = __webpack_require__(18);
+
+var _jsonp2 = _interopRequireDefault(_jsonp);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
+
+var origin = 'https://m.uczzd.cn';
+
+// get请求函数,对应jsonp
+function get(pathname, data) {
+  return new Promise(function (resolve) {
+    _jsonp2.default.get({
+      url: origin + pathname,
+      data: data,
+      success: function success(rs) {
+        resolve(rs);
+      },
+      error: function error() {
+        resolve();
+      }
+    });
+  });
+}
+
+// post请求函数
+function post(opts) {}exports.default = {
+  get: get,
+  post: post,
+  getImgs: getImgs
+};
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _PiCarousel = __webpack_require__(10);
+
+var _PiCarousel2 = _interopRequireDefault(_PiCarousel);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = {
+  components: {
+    PiCarousel: _PiCarousel2.default
+  },
+  props: Object.assign({}, _PiCarousel2.default.props)
+}; //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+var FORWARD = -1;
+var BACK = 1;
+
+exports.default = {
+  props: {
+    // 宽度
+    width: {
+      default: '100%'
+    },
+    // 高度
+    height: {
+      default: '100%'
+    },
+    // 列表数据
+    dataList: {
+      default: []
+    },
+    // 滑动距离阈值
+    swipSpanThreshold: {
+      default: 6
+    },
+    // 滑动阈值
+    swipThreshold: {
+      default: 50
+    },
+    // 动画时长(该时长,需要和动画时长相同)
+    duration: {
+      default: 400
+    },
+    // first和last拉不动的比率
+    pullRatio: {
+      default: 2
+    },
+    // 是否循环滚动
+    isLoop: {
+      default: true
+    },
+    // 默认滚动索引
+    index: {
+      default: 0
+    },
+    // 是否显示页脚
+    isShowPager: {
+      default: true
+    },
+    // 是否显示loading
+    isShowLoading: {
+      default: true
+    },
+    // 自动播放间隔
+    autoPlayTimeout: {
+      // 默认为0,表示禁用自动播放
+      default: 0
+    }
+  },
+  data: function data() {
+    return {
+      // 方向状态
+      direction: 0,
+      // 是否正在动画
+      isAnimating: false,
+      prevIndex: this.index - 1,
+      // 滚动索引
+      currentIndex: this.index,
+      nextIndex: this.index + 1,
+      // 滑动值
+      currentTranslate: 0
+    };
+  },
+
+  computed: {
+    prevData: function prevData() {
+      var dataList = this.dataList;
+      var prevIndex = this.prevIndex;
+
+      // 第一帧前面
+
+      if (prevIndex < 0) {
+        // 不能循环滚动
+        if (!this.isLoop) {
+          return;
+        }
+        prevIndex = dataList.length - 1;
+      }
+      return dataList[prevIndex];
+    },
+    currentData: function currentData() {
+      return this.dataList[this.currentIndex];
+    },
+    nextData: function nextData() {
+      var dataList = this.dataList;
+      var nextIndex = this.nextIndex;
+
+      // 最后一帧后面
+
+      if (nextIndex === dataList.length) {
+        // 不能循环滚动
+        if (!this.isLoop) {
+          return;
+        }
+        nextIndex = 0;
+      }
+      return dataList[nextIndex];
+    },
+    _class: function _class() {
+      return {
+        'pi-loading': this.isShowLoading,
+        'pi-animating': this.isAnimating
+      };
+    },
+    _style: function _style() {
+      return {
+        width: this.width,
+        height: this.height
+      };
+    },
+    _wrapStyle: function _wrapStyle() {
+      return {
+        transform: 'translate3d(' + this.currentTranslate + ',0,0)'
+      };
+    },
+    _prevClass: function _prevClass() {
+      return {
+        'temp-current': this.isAnimating && this.direction === BACK
+      };
+    },
+    _nextClass: function _nextClass() {
+      return {
+        'temp-current': this.isAnimating && this.direction === FORWARD
+      };
+    }
+  },
+  watch: {
+    currentData: function currentData() {
+      // 重置scrollTop
+      var currentItem = this.$refs.currentItem;
+
+      if (currentItem) {
+        var wrapEl = currentItem.firstElementChild;
+        wrapEl && (wrapEl.scrollTop = 0);
+      }
+    },
+    currentIndex: function currentIndex() {
+      var currentIndex = this.currentIndex;
+
+      this.prevIndex = currentIndex - 1;
+      this.nextIndex = currentIndex + 1;
+    }
+  },
+  mounted: function mounted() {
+    this.startInter();
+  },
+
+  methods: {
+    __touchstart: function __touchstart(evt) {
+      // 如果正在作动画,不作响应
+      if (this.isAnimating) {
+        return;
+      }
+
+      var touch = evt.targetTouches ? evt.targetTouches[0] : evt;
+
+      // 记录触摸开始位置
+      this.startX = touch.pageX;
+      this.startY = touch.pageY;
+
+      // 重置swipSpan
+      this.swipSpan = 0;
+      // 重置手指拖拽移动
+      this.isMoving = false;
+      // 禁用动画
+      this.notrans = true;
+
+      // 停止定时器
+      this.stopInter();
+    },
+    __touchmove: function __touchmove(evt) {
+      // 如果正在作动画,不作响应
+      if (this.isAnimating) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        return;
+      }
+
+      var touch = evt.targetTouches ? evt.targetTouches[0] : evt;
+      // x轴滑动距离
+      var swipSpanX = touch.pageX - this.startX;
+      var absX = Math.abs(swipSpanX);
+      // y轴滑动距离
+      var swipSpanY = touch.pageY - this.startY;
+      var absY = Math.abs(swipSpanY);
+
+      // x轴滑动距离大于y轴 y轴滑动距离小于阈值, 说明的确是左右滑动
+      if (this.isMoving || absY < absX || absY < this.swipSpanThreshold) {
+        evt.preventDefault();
+        evt.stopPropagation();
+
+        // 不能循环滚动
+        if (!this.isLoop) {
+          var currentIndex = this.currentIndex;
+          // 第一张图或最后一张图
+
+          if (currentIndex === 0 && swipSpanX > 0 || currentIndex === this.dataList.length - 1 && swipSpanX < 0) {
+            // 模拟拉不动操作体验
+            swipSpanX /= this.pullRatio;
+          }
+        }
+
+        // 位移
+        this.currentTranslate = (this.swipSpan = swipSpanX) + 'px';
+        // 已经满足滚动条件,且正在手指拖动
+        this.isMoving = true;
+      }
+    },
+    __touchend: function __touchend() {
+      // 如果正在作动画,不作响应
+      if (this.isAnimating) {
+        return;
+      }
+
+      var swipSpan = this.swipSpan,
+          swipThreshold = this.swipThreshold,
+          currentIndex = this.currentIndex;
+
+      var direction = void 0;
+
+      // 向左
+      if (swipSpan < -swipThreshold) {
+        // 不能循环滚动
+        if (!this.isLoop) {
+          // 不是最后一帧
+          currentIndex !== this.dataList.length - 1 && (direction = FORWARD);
+        } else {
+          direction = FORWARD;
+        }
+      }
+      // 向右
+      else if (swipSpan > swipThreshold) {
+          // 不能循环滚动
+          if (!this.isLoop) {
+            // 不是第一帧
+            currentIndex !== 0 && (direction = BACK);
+          } else {
+            direction = BACK;
+          }
+        }
+      // 滚动
+      swipSpan && this.slide(direction);
+
+      // 开始定时器
+      this.startInter();
+    },
+    __pagerClick: function __pagerClick(index) {
+      this.slideToIndex(index);
+    },
+    __wrapClick: function __wrapClick() {
+      this.$emit('click', this.currentIndex);
+    },
+
+
+    // 滚动
+    slide: function slide(direction, index) {
+      var _this = this;
+
+      // 正在动画
+      this.isAnimating = true;
+
+      // 判断滚动方向
+      switch (direction) {
+        // 向左
+        case FORWARD:
+        // 向右
+        case BACK:
+          {
+            // 方向状态
+            this.direction = direction;
+            // 作动画
+            this.currentTranslate = this.$el.offsetWidth * direction + 'px';
+
+            // index值为undefined
+            index === undefined && (index = this.currentIndex - direction);
+
+            // 触发slide事件
+            this.$emit('slide', index, direction);
+            break;
+          }
+        // 没有direction值(说明滑动没有超过swipSpanThreshold)
+        default:
+          {
+            this.currentTranslate = 0;
+            this.direction = 0;
+          }
+      }
+
+      // 复位
+      setTimeout(function () {
+        // 复位(更新内容)
+        _this.reset(index);
+      }, this.duration);
+    },
+
+    // 复位
+    reset: function reset(index) {
+      // 重置动画状态
+      this.isAnimating = false;
+
+      // 如无index
+      if (index === undefined) {
+        return;
+      }
+
+      // 复位
+      this.currentTranslate = 0;
+
+      // 计算index
+      var count = this.dataList.length;
+      if (index < 0) {
+        index = count - 1;
+      }
+      if (index === count) {
+        index = 0;
+      }
+      // 更新index(更新内容)
+      this.currentIndex = index;
+    },
+
+    // 滑动到第几帧
+    slideToIndex: function slideToIndex(index) {
+      var currentIndex = this.currentIndex;
+      // index不符合条件
+
+      if (typeof index !== 'number' || index < 0 || index >= this.dataList.length || index === currentIndex) {
+        return;
+      }
+
+      // 滑动方向
+      var direction = void 0;
+      // 向左
+      if (index > currentIndex) {
+        direction = FORWARD;
+        this.nextIndex = index;
+      }
+      // 向右
+      else {
+          direction = BACK;
+          this.prevIndex = index;
+        }
+      // 滑动操作
+      this.slide(direction, index);
+    },
+
+    // 开始定时器
+    startInter: function startInter() {
+      var _this2 = this;
+
+      var autoPlayTimeout = this.autoPlayTimeout;
+
+      if (autoPlayTimeout) {
+        this.inter = setInterval(function () {
+          _this2.slide(FORWARD);
+        }, autoPlayTimeout);
+      }
+    },
+
+    // 停止定定时器
+    stopInter: function stopInter() {
+      clearInterval(this.inter);
+    },
+
+    // 获取图片样式
+    getImgStyle: function getImgStyle(data) {
+      return data && { backgroundImage: 'url(' + data + ')' };
+    }
+  }
+};
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _PiCard = __webpack_require__(25);
+
+var _PiCard2 = _interopRequireDefault(_PiCard);
+
+var _request = __webpack_require__(11);
+
+var _request2 = _interopRequireDefault(_request);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+exports.default = {
+  components: {
+    PiCard: _PiCard2.default
+  },
+  data: function data() {
+    return {
+      dataList: ['https://soneway.github.io/jq/example/dist/img/1.jpg', 'https://soneway.github.io/jq/example/dist/img/2.jpg', 'https://soneway.github.io/jq/example/dist/img/3.jpg', 'https://soneway.github.io/jq/example/dist/img/4.jpg', 'https://soneway.github.io/jq/example/dist/img/5.jpg']
+    };
+  },
+  mounted: function mounted() {},
+
+  methods: {}
+};
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+__webpack_require__(7);
+
+var _vue = __webpack_require__(9);
 
 var _vue2 = _interopRequireDefault(_vue);
 
-var _vueRouter = __webpack_require__(5);
+var _vueRouter = __webpack_require__(8);
 
 var _vueRouter2 = _interopRequireDefault(_vueRouter);
 
-var _router = __webpack_require__(3);
+var _router = __webpack_require__(6);
 
 var _router2 = _interopRequireDefault(_router);
 
@@ -13825,7 +14968,7 @@ new _vue2.default({
 }).$mount('#root');
 
 /***/ }),
-/* 9 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13844,7 +14987,7 @@ if (!Object.assign) {
 }
 
 /***/ }),
-/* 10 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14085,10 +15228,248 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
   window.Promise = Promise;
 })(window);
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2).setImmediate))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5).setImmediate))
 
 /***/ }),
-/* 11 */
+/* 18 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+// 获取uid函数
+var getUid = function () {
+  var uid = 0;
+  return function () {
+    return ++uid;
+  };
+}();
+
+// 获取?或者&号
+function getSymbol(url) {
+  return url.indexOf('?') < 0 ? '?' : '&';
+}
+
+// 判断是否为function函数
+function isFunction(fn) {
+  return typeof fn === 'function';
+}
+
+// 加载js函数
+var getScript = function () {
+  var headEl = document.head;
+  var jsReg = /(\.js)$/;
+
+  return function (url, fn) {
+    var isJs = jsReg.test(url);
+    var scriptEl = document.createElement('script');
+
+    // type
+    scriptEl.type = 'text/javascript';
+
+    // onload
+    scriptEl.onload = function () {
+      isFunction(fn) && fn();
+      isJs || headEl.removeChild(scriptEl);
+    };
+
+    // onerror
+    scriptEl.onerror = function (err) {
+      isFunction(fn) && fn(err);
+    };
+
+    // 请求
+    scriptEl.src = url;
+    headEl.appendChild(scriptEl);
+  };
+}();
+
+// get数据函数
+function get(opts) {
+  // 配置项
+  opts = Object.assign({}, get.defaults, opts);
+  var _opts = opts,
+      url = _opts.url,
+      data = _opts.data;
+  // callback可用于统计
+
+  var _opts2 = opts,
+      success = _opts2.success,
+      error = _opts2.error,
+      callback = _opts2.callback;
+
+  // url判断
+
+  if (!url) {
+    return console.error('请求的url不能为空');
+  }
+
+  // 回调函数名
+  var cbName = 'jsonpcb' + getUid();
+
+  // 将回调函数添加到全局变量
+  window[cbName] = function (rs) {
+    // 回调
+    isFunction(success) && success(rs);
+    isFunction(callback) && callback(opts, rs);
+    // 释放回调函数
+    window[cbName] = null;
+  };
+
+  // url中添加callback
+  Object.assign(data || (data = {}), {
+    callback: cbName
+  });
+
+  // 拼接data
+  if (data) {
+    url += getSymbol(url) + Object.keys(data).map(function (item) {
+      return item + '=' + encodeURIComponent(data[item]);
+    }).join('&');
+  }
+
+  // 发起请求
+  getScript(url, function (err) {
+    // js加载出错
+    if (err) {
+      // 回调
+      isFunction(error) && error(err);
+      isFunction(callback) && callback(opts);
+      // 释放回调函数
+      window[cbName] = null;
+    }
+  });
+}
+// get数据默认配置项
+get.defaults = {};
+
+// post数据函数
+var post = function () {
+  // 回调函数对象
+  var msgcb = {};
+  var bodyEl = document.body;
+  // 临时元素
+  var tmpEl = document.createElement('div');
+
+  // 绑定消息事件
+  window.addEventListener('message', function (evt) {
+    var data = evt.data;
+
+    // data转对象
+
+    (typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object' || (data = JSON.parse(data || null) || {});
+
+    // 回调函数
+    var callback = msgcb[data.id];
+    isFunction(callback) && callback(data.rs);
+  });
+
+  return function (opts) {
+    // 配置项
+    opts = Object.assign({}, post.defaults, opts);
+    var _opts3 = opts,
+        success = _opts3.success,
+        error = _opts3.error,
+        callback = _opts3.callback,
+        formSelector = _opts3.formSelector,
+        url = _opts3.url,
+        method = _opts3.method,
+        data = _opts3.data,
+        enctype = _opts3.enctype;
+
+    // iframe元素
+
+    var ifrId = 'postifr' + getUid();
+    tmpEl.innerHTML = '<iframe name="' + ifrId + '" style="display: none;"></iframe>';
+    var ifrEl = tmpEl.childNodes[0];
+    bodyEl.appendChild(ifrEl);
+
+    // form元素
+    var formEl = void 0;
+    // 页面中已存在的form提交
+    if (formSelector) {
+      formEl = document.querySelector(formSelector);
+      // 请求url中添加callback信息
+      var _formEl = formEl,
+          action = _formEl.action;
+
+      formEl.action = action + getSymbol(action) + 'msgcb=' + ifrId;
+    }
+    // 动态生成的form提交
+    else {
+        // 请求url
+        var _action = url + getSymbol(url) + 'msgcb=' + ifrId;
+        // 数据添加到form的input
+        var inputHtml = data && Object.keys(data).map(function (key) {
+          return '<input type="hidden" name="' + key + '" value="' + data[key] + '"/>';
+        }).join('');
+        tmpEl.innerHTML = '<form style="display: none;" method="' + method + '" action="' + _action + '">' + inputHtml + '</form>';
+        formEl = tmpEl.childNodes[0];
+      }
+    // target
+    formEl.target = ifrId;
+    // enctype
+    enctype && (formEl.enctype = enctype);
+
+    // message事件响应函数
+    msgcb[ifrId] = function (rs) {
+      // 回调
+      isFunction(success) && success(rs);
+      isFunction(callback) && callback(opts, rs);
+      // 释放回调函数
+      msgcb[ifrId] = null;
+
+      // 删除节点
+      bodyEl.removeChild(ifrEl);
+      formSelector || bodyEl.removeChild(formEl);
+    };
+
+    // iframe onload事件,主要处理请求失败
+    ifrEl.onload = function () {
+      // 延迟运行
+      setTimeout(function () {
+        // 如果回调还在,说明没有成功回调,即发生错误
+        if (msgcb[ifrId]) {
+          // 回调
+          isFunction(error) && error();
+          isFunction(callback) && callback(opts);
+          // 释放回调函数
+          msgcb[ifrId] = null;
+
+          // 删除节点
+          bodyEl.removeChild(ifrEl);
+          formSelector || bodyEl.removeChild(formEl);
+        }
+      }, 100);
+    };
+
+    // 提交
+    formSelector || bodyEl.appendChild(formEl);
+    formEl.submit();
+  };
+}();
+// post数据默认配置项
+post.defaults = {
+  method: 'POST'
+};
+
+exports.default = {
+  // 加载js函数
+  getScript: getScript,
+  // get数据函数
+  get: get,
+  // post数据函数
+  post: post
+};
+
+/***/ }),
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14114,64 +15495,49 @@ Object.getValByPath = function (obj, path, defaultVal) {
 };
 
 /***/ }),
-/* 12 */,
-/* 13 */
-/***/ (function(module, exports) {
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
 
-/*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-*/
-// css base code, injected by the css-loader
-module.exports = function() {
-	var list = [];
+exports = module.exports = __webpack_require__(1)();
+// imports
 
-	// return the list of modules as css string
-	list.toString = function toString() {
-		var result = [];
-		for(var i = 0; i < this.length; i++) {
-			var item = this[i];
-			if(item[2]) {
-				result.push("@media " + item[2] + "{" + item[1] + "}");
-			} else {
-				result.push(item[1]);
-			}
-		}
-		return result.join("");
-	};
 
-	// import a list of modules into the list
-	list.i = function(modules, mediaQuery) {
-		if(typeof modules === "string")
-			modules = [[null, modules, ""]];
-		var alreadyImportedModules = {};
-		for(var i = 0; i < this.length; i++) {
-			var id = this[i][0];
-			if(typeof id === "number")
-				alreadyImportedModules[id] = true;
-		}
-		for(i = 0; i < modules.length; i++) {
-			var item = modules[i];
-			// skip already imported module
-			// this implementation is not 100% perfect for weird media query combinations
-			//  when a module is imported multiple times with different media queries.
-			//  I hope this will never occur (Hey this way we have smaller bundles)
-			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
-				if(mediaQuery && !item[2]) {
-					item[2] = mediaQuery;
-				} else if(mediaQuery) {
-					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
-				}
-				list.push(item);
-			}
-		}
-	};
-	return list;
-};
+// module
+exports.push([module.i, "\n@charset \"UTF-8\";\n.pi-card {\n  -webkit-transform: scale3d(0.68, 0.68, 1);\n          transform: scale3d(0.68, 0.68, 1);\n  /*样式覆盖*/\n  /*动画状态,且左右切换*/\n}\n.pi-card.pi-card {\n    overflow: visible;\n}\n.pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item {\n    -webkit-transition: all ease 0.4s;\n    transition: all ease 0.4s;\n    /*动画中的当前元素缩小小*/\n}\n.pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item:nth-of-type(2) {\n      -webkit-transform: scale3d(0.68, 0.68, 1);\n              transform: scale3d(0.68, 0.68, 1);\n}\n.pi-card .pi-item {\n    /*非当前元素*/\n}\n.pi-card .pi-item:nth-of-type(1), .pi-card .pi-item:nth-of-type(3) {\n      /*非临时当前元素缩小*/\n}\n.pi-card .pi-item:nth-of-type(1):not(.temp-current), .pi-card .pi-item:nth-of-type(3):not(.temp-current) {\n        -webkit-transform: scale3d(0.68, 0.68, 1);\n                transform: scale3d(0.68, 0.68, 1);\n}\n", "", {"version":3,"sources":["/./src/component/PiCard.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB;EACE,0CAAkC;UAAlC,kCAAkC;EAClC,QAAQ;EACR,cAAc;CAAE;AAChB;IACE,kBAAkB;CAAE;AACtB;IACE,kCAA0B;IAA1B,0BAA0B;IAC1B,eAAe;CAAE;AACjB;MACE,0CAAkC;cAAlC,kCAAkC;CAAE;AACxC;IACE,SAAS;CAAE;AACX;MACE,aAAa;CAAE;AACf;QACE,0CAAkC;gBAAlC,kCAAkC;CAAE","file":"PiCard.vue","sourcesContent":["@charset \"UTF-8\";\n.pi-card {\n  transform: scale3d(0.68, 0.68, 1);\n  /*样式覆盖*/\n  /*动画状态,且左右切换*/ }\n  .pi-card.pi-card {\n    overflow: visible; }\n  .pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item {\n    transition: all ease 0.4s;\n    /*动画中的当前元素缩小小*/ }\n    .pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item:nth-of-type(2) {\n      transform: scale3d(0.68, 0.68, 1); }\n  .pi-card .pi-item {\n    /*非当前元素*/ }\n    .pi-card .pi-item:nth-of-type(1), .pi-card .pi-item:nth-of-type(3) {\n      /*非临时当前元素缩小*/ }\n      .pi-card .pi-item:nth-of-type(1):not(.temp-current), .pi-card .pi-item:nth-of-type(3):not(.temp-current) {\n        transform: scale3d(0.68, 0.68, 1); }\n"],"sourceRoot":"webpack://"}]);
+
+// exports
 
 
 /***/ }),
-/* 14 */
+/* 21 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(1)();
+// imports
+
+
+// module
+exports.push([module.i, "\n@charset \"UTF-8\";\n/*loading样式*/\n.loading:before, .pi-carousel.pi-loading .pi-item:before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  margin-left: -20px;\n  margin-top: -20px;\n  border-radius: 40px;\n  /*如.loading元素中还有transform,:before内容将挡不住*/\n  z-index: -1;\n  /*圆环用border生成*/\n  border: 3px solid rgba(136, 136, 136, 0.2);\n  border-left: 3px solid #888888;\n  /*动画*/\n  -webkit-animation: ani_circle 0.8s linear infinite;\n          animation: ani_circle 0.8s linear infinite;\n}\n\n/*旋转动画*/\n@-webkit-keyframes ani_circle {\n0% {\n    -webkit-transform: rotateZ(0deg);\n            transform: rotateZ(0deg);\n}\n100% {\n    -webkit-transform: rotateZ(360deg);\n            transform: rotateZ(360deg);\n}\n}\n@keyframes ani_circle {\n0% {\n    -webkit-transform: rotateZ(0deg);\n            transform: rotateZ(0deg);\n}\n100% {\n    -webkit-transform: rotateZ(360deg);\n            transform: rotateZ(360deg);\n}\n}\n.pi-carousel {\n  overflow: hidden;\n  position: relative;\n  /*可有效减缓闪烁*/\n  -webkit-backface-visibility: hidden;\n          backface-visibility: hidden;\n  /*loading*/\n  /*正在动画*/\n}\n.pi-carousel.pi-animating .pi-wrap {\n    -webkit-transition: -webkit-transform ease 0.4s;\n    transition: -webkit-transform ease 0.4s;\n    transition: transform ease 0.4s;\n    transition: transform ease 0.4s, -webkit-transform ease 0.4s;\n}\n.pi-carousel .pi-wrap {\n    width: 300%;\n    height: 100%;\n    margin-left: -100%;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    /*虽然是默认值,但不能省略,以确保auto-prefixer插件准确生成兼容安卓4.0的代码*/\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row;\n}\n.pi-carousel .pi-item {\n    height: 100%;\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    overflow: hidden;\n}\n.pi-carousel .pi-item .pi-img {\n      background: center center no-repeat;\n      background-size: contain;\n      width: 100%;\n      height: 100%;\n}\n.pi-carousel .pi-pager {\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    text-align: center;\n    font-size: 0;\n    line-height: 20px;\n}\n.pi-carousel .pi-pager > span {\n      border: 3px solid #bbb;\n      border-radius: 50%;\n      margin: 0 2px;\n}\n.pi-carousel .pi-pager > span.selected {\n        border-color: #555;\n}\n", "", {"version":3,"sources":["/./src/component/PiCarousel.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,aAAa;AACb;EACE,YAAY;EACZ,mBAAmB;EACnB,UAAU;EACV,SAAS;EACT,YAAY;EACZ,aAAa;EACb,mBAAmB;EACnB,kBAAkB;EAClB,oBAAoB;EACpB,yCAAyC;EACzC,YAAY;EACZ,eAAe;EACf,2CAA2C;EAC3C,+BAA+B;EAC/B,MAAM;EACN,mDAA2C;UAA3C,2CAA2C;CAAE;;AAE/C,QAAQ;AACR;AACE;IACE,iCAAyB;YAAzB,yBAAyB;CAAE;AAC7B;IACE,mCAA2B;YAA3B,2BAA2B;CAAE;CAAE;AAJnC;AACE;IACE,iCAAyB;YAAzB,yBAAyB;CAAE;AAC7B;IACE,mCAA2B;YAA3B,2BAA2B;CAAE;CAAE;AAEnC;EACE,iBAAiB;EACjB,mBAAmB;EACnB,WAAW;EACX,oCAA4B;UAA5B,4BAA4B;EAC5B,WAAW;EACX,QAAQ;CAAE;AACV;IACE,gDAAgC;IAAhC,wCAAgC;IAAhC,gCAAgC;IAAhC,6DAAgC;CAAE;AACpC;IACE,YAAY;IACZ,aAAa;IACb,mBAAmB;IACnB,qBAAc;IAAd,sBAAc;IAAd,cAAc;IACd,iDAAiD;IACjD,+BAAoB;IAApB,8BAAoB;IAApB,4BAAoB;YAApB,oBAAoB;CAAE;AACxB;IACE,aAAa;IACb,oBAAQ;IAAR,gBAAQ;YAAR,QAAQ;IACR,iBAAiB;CAAE;AACnB;MACE,oCAAoC;MACpC,yBAAyB;MACzB,YAAY;MACZ,aAAa;CAAE;AACnB;IACE,mBAAmB;IACnB,QAAQ;IACR,SAAS;IACT,UAAU;IACV,mBAAmB;IACnB,aAAa;IACb,kBAAkB;CAAE;AACpB;MACE,uBAAuB;MACvB,mBAAmB;MACnB,cAAc;CAAE;AAChB;QACE,mBAAmB;CAAE","file":"PiCarousel.vue","sourcesContent":["@charset \"UTF-8\";\n/*loading样式*/\n.loading:before, .pi-carousel.pi-loading .pi-item:before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  margin-left: -20px;\n  margin-top: -20px;\n  border-radius: 40px;\n  /*如.loading元素中还有transform,:before内容将挡不住*/\n  z-index: -1;\n  /*圆环用border生成*/\n  border: 3px solid rgba(136, 136, 136, 0.2);\n  border-left: 3px solid #888888;\n  /*动画*/\n  animation: ani_circle 0.8s linear infinite; }\n\n/*旋转动画*/\n@keyframes ani_circle {\n  0% {\n    transform: rotateZ(0deg); }\n  100% {\n    transform: rotateZ(360deg); } }\n\n.pi-carousel {\n  overflow: hidden;\n  position: relative;\n  /*可有效减缓闪烁*/\n  backface-visibility: hidden;\n  /*loading*/\n  /*正在动画*/ }\n  .pi-carousel.pi-animating .pi-wrap {\n    transition: transform ease 0.4s; }\n  .pi-carousel .pi-wrap {\n    width: 300%;\n    height: 100%;\n    margin-left: -100%;\n    display: flex;\n    /*虽然是默认值,但不能省略,以确保auto-prefixer插件准确生成兼容安卓4.0的代码*/\n    flex-direction: row; }\n  .pi-carousel .pi-item {\n    height: 100%;\n    flex: 1;\n    overflow: hidden; }\n    .pi-carousel .pi-item .pi-img {\n      background: center center no-repeat;\n      background-size: contain;\n      width: 100%;\n      height: 100%; }\n  .pi-carousel .pi-pager {\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    text-align: center;\n    font-size: 0;\n    line-height: 20px; }\n    .pi-carousel .pi-pager > span {\n      border: 3px solid #bbb;\n      border-radius: 50%;\n      margin: 0 2px; }\n      .pi-carousel .pi-pager > span.selected {\n        border-color: #555; }\n"],"sourceRoot":"webpack://"}]);
+
+// exports
+
+
+/***/ }),
+/* 22 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(1)();
+// imports
+
+
+// module
+exports.push([module.i, "\n@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  -webkit-user-select: none;\n          user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch;\n}\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit;\n}\ninput, textarea {\n  /*输入框可选中文本*/\n  -webkit-user-select: text;\n          user-select: text;\n}\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle;\n}\nimg {\n  /*图片无边框*/\n  border: none;\n}\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n}\nli {\n  list-style: none;\n}\ni {\n  font-style: normal;\n}\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  overflow: hidden;\n}\n", "", {"version":3,"sources":["/./src/view/Card.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,kBAAkB;AAClB;EACE,UAAU;EACV,WAAW;EACX,uBAAuB;CAAE;AAE3B;EACE,mBAAmB;EACnB,OAAO;EACP,YAAY;EACZ,gBAAgB;EAChB,mCAAmC;EACnC,+BAA+B;EAC/B,UAAU;EACV,0BAAkB;UAAlB,kBAAkB;EAClB,yBAAyB;EACzB,yCAAyC;EACzC,UAAU;EACV,4BAA4B;EAC5B,QAAQ;EACR,kCAAkC;CAAE;AAEtC;EACE,eAAe;EACf,mBAAmB;CAAE;AAEvB;EACE,YAAY;EACZ,0BAAkB;UAAlB,kBAAkB;CAAE;AAEtB;EACE,eAAe;EACf,uBAAuB;CAAE;AAE3B;EACE,SAAS;EACT,aAAa;CAAE;AAEjB;EACE,cAAc;EACd,eAAe;EACf,sBAAsB;EACtB,gBAAgB;CAAE;AAEpB;EACE,iBAAiB;CAAE;AAErB;EACE,mBAAmB;CAAE;AAEvB;EACE,mBAAmB;EACnB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,UAAU;EACV,iBAAiB;CAAE","file":"Card.vue","sourcesContent":["@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box; }\n\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch; }\n\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit; }\n\ninput, textarea {\n  /*输入框可选中文本*/\n  user-select: text; }\n\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle; }\n\nimg {\n  /*图片无边框*/\n  border: none; }\n\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer; }\n\nli {\n  list-style: none; }\n\ni {\n  font-style: normal; }\n\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  overflow: hidden; }\n"],"sourceRoot":"webpack://"}]);
+
+// exports
+
+
+/***/ }),
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, process) {/**
@@ -14898,10 +16264,10 @@ module.exports = function() {
   typeof self === "object" ? self : this
 );
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(1), __webpack_require__(0)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0), __webpack_require__(4)))
 
 /***/ }),
-/* 15 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -15091,2949 +16457,22 @@ module.exports = function() {
     attachTo.clearImmediate = clearImmediate;
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(1), __webpack_require__(0)))
-
-/***/ }),
-/* 16 */,
-/* 17 */
-/***/ (function(module, exports) {
-
-/* globals __VUE_SSR_CONTEXT__ */
-
-// this module is a runtime utility for cleaner component module output and will
-// be included in the final webpack user bundle
-
-module.exports = function normalizeComponent (
-  rawScriptExports,
-  compiledTemplate,
-  injectStyles,
-  scopeId,
-  moduleIdentifier /* server only */
-) {
-  var esModule
-  var scriptExports = rawScriptExports = rawScriptExports || {}
-
-  // ES6 modules interop
-  var type = typeof rawScriptExports.default
-  if (type === 'object' || type === 'function') {
-    esModule = rawScriptExports
-    scriptExports = rawScriptExports.default
-  }
-
-  // Vue.extend constructor export interop
-  var options = typeof scriptExports === 'function'
-    ? scriptExports.options
-    : scriptExports
-
-  // render functions
-  if (compiledTemplate) {
-    options.render = compiledTemplate.render
-    options.staticRenderFns = compiledTemplate.staticRenderFns
-  }
-
-  // scopedId
-  if (scopeId) {
-    options._scopeId = scopeId
-  }
-
-  var hook
-  if (moduleIdentifier) { // server build
-    hook = function (context) {
-      // 2.3 injection
-      context = context || (this.$vnode && this.$vnode.ssrContext)
-      // 2.2 with runInNewContext: true
-      if (!context && typeof __VUE_SSR_CONTEXT__ !== 'undefined') {
-        context = __VUE_SSR_CONTEXT__
-      }
-      // inject component styles
-      if (injectStyles) {
-        injectStyles.call(this, context)
-      }
-      // register component module identifier for async chunk inferrence
-      if (context && context._registeredComponents) {
-        context._registeredComponents.add(moduleIdentifier)
-      }
-    }
-    // used by ssr in case component is cached and beforeCreate
-    // never gets called
-    options._ssrRegister = hook
-  } else if (injectStyles) {
-    hook = injectStyles
-  }
-
-  if (hook) {
-    // inject component registration as beforeCreate hook
-    var existing = options.beforeCreate
-    options.beforeCreate = existing
-      ? [].concat(existing, hook)
-      : [hook]
-  }
-
-  return {
-    esModule: esModule,
-    exports: scriptExports,
-    options: options
-  }
-}
-
-
-/***/ }),
-/* 18 */,
-/* 19 */,
-/* 20 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*
-  MIT License http://www.opensource.org/licenses/mit-license.php
-  Author Tobias Koppers @sokra
-  Modified by Evan You @yyx990803
-*/
-
-var hasDocument = typeof document !== 'undefined'
-
-if (typeof DEBUG !== 'undefined' && DEBUG) {
-  if (!hasDocument) {
-    throw new Error(
-    'vue-style-loader cannot be used in a non-browser environment. ' +
-    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
-  ) }
-}
-
-var listToStyles = __webpack_require__(21)
-
-/*
-type StyleObject = {
-  id: number;
-  parts: Array<StyleObjectPart>
-}
-
-type StyleObjectPart = {
-  css: string;
-  media: string;
-  sourceMap: ?string
-}
-*/
-
-var stylesInDom = {/*
-  [id: number]: {
-    id: number,
-    refs: number,
-    parts: Array<(obj?: StyleObjectPart) => void>
-  }
-*/}
-
-var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
-var singletonElement = null
-var singletonCounter = 0
-var isProduction = false
-var noop = function () {}
-
-// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
-// tags it will allow on a page
-var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
-
-module.exports = function (parentId, list, _isProduction) {
-  isProduction = _isProduction
-
-  var styles = listToStyles(parentId, list)
-  addStylesToDom(styles)
-
-  return function update (newList) {
-    var mayRemove = []
-    for (var i = 0; i < styles.length; i++) {
-      var item = styles[i]
-      var domStyle = stylesInDom[item.id]
-      domStyle.refs--
-      mayRemove.push(domStyle)
-    }
-    if (newList) {
-      styles = listToStyles(parentId, newList)
-      addStylesToDom(styles)
-    } else {
-      styles = []
-    }
-    for (var i = 0; i < mayRemove.length; i++) {
-      var domStyle = mayRemove[i]
-      if (domStyle.refs === 0) {
-        for (var j = 0; j < domStyle.parts.length; j++) {
-          domStyle.parts[j]()
-        }
-        delete stylesInDom[domStyle.id]
-      }
-    }
-  }
-}
-
-function addStylesToDom (styles /* Array<StyleObject> */) {
-  for (var i = 0; i < styles.length; i++) {
-    var item = styles[i]
-    var domStyle = stylesInDom[item.id]
-    if (domStyle) {
-      domStyle.refs++
-      for (var j = 0; j < domStyle.parts.length; j++) {
-        domStyle.parts[j](item.parts[j])
-      }
-      for (; j < item.parts.length; j++) {
-        domStyle.parts.push(addStyle(item.parts[j]))
-      }
-      if (domStyle.parts.length > item.parts.length) {
-        domStyle.parts.length = item.parts.length
-      }
-    } else {
-      var parts = []
-      for (var j = 0; j < item.parts.length; j++) {
-        parts.push(addStyle(item.parts[j]))
-      }
-      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
-    }
-  }
-}
-
-function createStyleElement () {
-  var styleElement = document.createElement('style')
-  styleElement.type = 'text/css'
-  head.appendChild(styleElement)
-  return styleElement
-}
-
-function addStyle (obj /* StyleObjectPart */) {
-  var update, remove
-  var styleElement = document.querySelector('style[data-vue-ssr-id~="' + obj.id + '"]')
-
-  if (styleElement) {
-    if (isProduction) {
-      // has SSR styles and in production mode.
-      // simply do nothing.
-      return noop
-    } else {
-      // has SSR styles but in dev mode.
-      // for some reason Chrome can't handle source map in server-rendered
-      // style tags - source maps in <style> only works if the style tag is
-      // created and inserted dynamically. So we remove the server rendered
-      // styles and inject new ones.
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  if (isOldIE) {
-    // use singleton mode for IE9.
-    var styleIndex = singletonCounter++
-    styleElement = singletonElement || (singletonElement = createStyleElement())
-    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
-    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
-  } else {
-    // use multi-style-tag mode in all other cases
-    styleElement = createStyleElement()
-    update = applyToTag.bind(null, styleElement)
-    remove = function () {
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  update(obj)
-
-  return function updateStyle (newObj /* StyleObjectPart */) {
-    if (newObj) {
-      if (newObj.css === obj.css &&
-          newObj.media === obj.media &&
-          newObj.sourceMap === obj.sourceMap) {
-        return
-      }
-      update(obj = newObj)
-    } else {
-      remove()
-    }
-  }
-}
-
-var replaceText = (function () {
-  var textStore = []
-
-  return function (index, replacement) {
-    textStore[index] = replacement
-    return textStore.filter(Boolean).join('\n')
-  }
-})()
-
-function applyToSingletonTag (styleElement, index, remove, obj) {
-  var css = remove ? '' : obj.css
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = replaceText(index, css)
-  } else {
-    var cssNode = document.createTextNode(css)
-    var childNodes = styleElement.childNodes
-    if (childNodes[index]) styleElement.removeChild(childNodes[index])
-    if (childNodes.length) {
-      styleElement.insertBefore(cssNode, childNodes[index])
-    } else {
-      styleElement.appendChild(cssNode)
-    }
-  }
-}
-
-function applyToTag (styleElement, obj) {
-  var css = obj.css
-  var media = obj.media
-  var sourceMap = obj.sourceMap
-
-  if (media) {
-    styleElement.setAttribute('media', media)
-  }
-
-  if (sourceMap) {
-    // https://developer.chrome.com/devtools/docs/javascript-debugging
-    // this makes source maps inside style tags work properly in Chrome
-    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
-    // http://stackoverflow.com/a/26603875
-    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
-  }
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = css
-  } else {
-    while (styleElement.firstChild) {
-      styleElement.removeChild(styleElement.firstChild)
-    }
-    styleElement.appendChild(document.createTextNode(css))
-  }
-}
-
-
-/***/ }),
-/* 21 */
-/***/ (function(module, exports) {
-
-/**
- * Translates the list format produced by css-loader into something
- * easier to manipulate.
- */
-module.exports = function listToStyles (parentId, list) {
-  var styles = []
-  var newStyles = {}
-  for (var i = 0; i < list.length; i++) {
-    var item = list[i]
-    var id = item[0]
-    var css = item[1]
-    var media = item[2]
-    var sourceMap = item[3]
-    var part = {
-      id: parentId + ':' + i,
-      css: css,
-      media: media,
-      sourceMap: sourceMap
-    }
-    if (!newStyles[id]) {
-      styles.push(newStyles[id] = { id: id, parts: [part] })
-    } else {
-      newStyles[id].parts.push(part)
-    }
-  }
-  return styles
-}
-
-
-/***/ }),
-/* 22 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(71)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(26),
-  /* template */
-  __webpack_require__(60),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/component/PiCarousel.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] PiCarousel.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-3eefac56", Component.options)
-  } else {
-    hotAPI.reload("data-v-3eefac56", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 23 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-// 获取图片数据
-var getImgs = function () {
-  var _ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee() {
-    var rs, articles;
-    return regeneratorRuntime.wrap(function _callee$(_context) {
-      while (1) {
-        switch (_context.prev = _context.next) {
-          case 0:
-            _context.next = 2;
-            return get('/iflow/api/v1/channel/100?method=new');
-
-          case 2:
-            rs = _context.sent;
-
-            if (rs) {
-              _context.next = 5;
-              break;
-            }
-
-            return _context.abrupt('return');
-
-          case 5:
-            articles = Object.getValByPath(rs, 'data.articles', {});
-            return _context.abrupt('return', Object.keys(articles).map(function (key) {
-              return Object.getValByPath(articles, key + '.images.0.url');
-            }).filter(function (item) {
-              return item;
-            }));
-
-          case 7:
-          case 'end':
-            return _context.stop();
-        }
-      }
-    }, _callee, this);
-  }));
-
-  return function getImgs() {
-    return _ref.apply(this, arguments);
-  };
-}();
-
-var _jsonp = __webpack_require__(35);
-
-var _jsonp2 = _interopRequireDefault(_jsonp);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
-
-var origin = 'https://m.uczzd.cn';
-
-// get请求函数,对应jsonp
-function get(pathname, data) {
-  return new Promise(function (resolve) {
-    _jsonp2.default.get({
-      url: origin + pathname,
-      data: data,
-      success: function success(rs) {
-        resolve(rs);
-      },
-      error: function error() {
-        resolve();
-      }
-    });
-  });
-}
-
-// post请求函数
-function post(opts) {}exports.default = {
-  get: get,
-  post: post,
-  getImgs: getImgs
-};
-
-/***/ }),
-/* 24 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-exports.default = {
-  props: {
-    // 宽度
-    width: {
-      default: '280px'
-    },
-    // 标题
-    title: {
-      default: '提示'
-    },
-    // 确定按钮文案
-    btnOkText: {
-      default: '确定'
-    },
-    // 确定按钮点击事件
-    btnOkClick: {
-      default: null
-    },
-    // 是否添加到全局变量
-    isGlobal: {
-      default: false
-    }
-  },
-  data: function data() {
-    return {
-      msg: '',
-      visible: false
-    };
-  },
-
-  computed: {
-    _class: function _class() {
-      return {
-        visible: this.visible
-      };
-    },
-    _boxStyle: function _boxStyle() {
-      return {
-        width: this.width
-      };
-    }
-  },
-  created: function created() {
-    // 初始配置
-    this.defaults = Object.assign({}, this._props);
-    this.isGlobal && (window.alert = this.show);
-  },
-
-  methods: {
-    show: function show(opts) {
-      // 配置项
-      (typeof opts === 'undefined' ? 'undefined' : _typeof(opts)) === 'object' || (opts = { msg: opts });
-      // 配置项合并
-      Object.assign(this, this.defaults, opts);
-      // 显示
-      this.visible = true;
-    },
-    __btnOkClick: function __btnOkClick() {
-      this.visible = false;
-      var btnOkClick = this.btnOkClick;
-
-      typeof btnOkClick === 'function' && btnOkClick();
-    }
-  }
-};
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0), __webpack_require__(4)))
 
 /***/ }),
 /* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _PiCarousel = __webpack_require__(22);
-
-var _PiCarousel2 = _interopRequireDefault(_PiCarousel);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = {
-  components: {
-    PiCarousel: _PiCarousel2.default
-  },
-  props: Object.assign({}, _PiCarousel2.default.props)
-}; //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/***/ }),
-/* 26 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-var FORWARD = -1;
-var BACK = 1;
-
-exports.default = {
-  props: {
-    // 宽度
-    width: {
-      default: '100%'
-    },
-    // 高度
-    height: {
-      default: '100%'
-    },
-    // 列表数据
-    dataList: {
-      default: []
-    },
-    // 滑动距离阈值
-    swipSpanThreshold: {
-      default: 6
-    },
-    // 滑动阈值
-    swipThreshold: {
-      default: 50
-    },
-    // 动画时长(该时长,需要和动画时长相同)
-    duration: {
-      default: 400
-    },
-    // first和last拉不动的比率
-    pullRatio: {
-      default: 2
-    },
-    // 是否循环滚动
-    isLoop: {
-      default: true
-    },
-    // 默认滚动索引
-    index: {
-      default: 0
-    },
-    // 是否显示页脚
-    isShowPager: {
-      default: true
-    },
-    // 是否显示loading
-    isShowLoading: {
-      default: true
-    },
-    // 自动播放间隔
-    autoPlayTimeout: {
-      // 默认为0,表示禁用自动播放
-      default: 0
-    }
-  },
-  data: function data() {
-    return {
-      // 方向状态
-      direction: 0,
-      // 是否正在动画
-      isAnimating: false,
-      prevIndex: this.index - 1,
-      // 滚动索引
-      currentIndex: this.index,
-      nextIndex: this.index + 1,
-      // 滑动值
-      currentTranslate: 0
-    };
-  },
-
-  computed: {
-    prevData: function prevData() {
-      var dataList = this.dataList;
-      var prevIndex = this.prevIndex;
-
-      // 第一帧前面
-
-      if (prevIndex < 0) {
-        // 不能循环滚动
-        if (!this.isLoop) {
-          return;
-        }
-        prevIndex = dataList.length - 1;
-      }
-      return dataList[prevIndex];
-    },
-    currentData: function currentData() {
-      return this.dataList[this.currentIndex];
-    },
-    nextData: function nextData() {
-      var dataList = this.dataList;
-      var nextIndex = this.nextIndex;
-
-      // 最后一帧后面
-
-      if (nextIndex === dataList.length) {
-        // 不能循环滚动
-        if (!this.isLoop) {
-          return;
-        }
-        nextIndex = 0;
-      }
-      return dataList[nextIndex];
-    },
-    _class: function _class() {
-      return {
-        'pi-loading': this.isShowLoading,
-        'pi-animating': this.isAnimating
-      };
-    },
-    _style: function _style() {
-      return {
-        width: this.width,
-        height: this.height
-      };
-    },
-    _wrapStyle: function _wrapStyle() {
-      return {
-        transform: 'translate3d(' + this.currentTranslate + ',0,0)'
-      };
-    },
-    _prevClass: function _prevClass() {
-      return {
-        'temp-current': this.isAnimating && this.direction === BACK
-      };
-    },
-    _nextClass: function _nextClass() {
-      return {
-        'temp-current': this.isAnimating && this.direction === FORWARD
-      };
-    }
-  },
-  watch: {
-    currentData: function currentData() {
-      // 重置scrollTop
-      var currentItem = this.$refs.currentItem;
-
-      if (currentItem) {
-        var wrapEl = currentItem.firstElementChild;
-        wrapEl && (wrapEl.scrollTop = 0);
-      }
-    },
-    currentIndex: function currentIndex() {
-      var currentIndex = this.currentIndex;
-
-      this.prevIndex = currentIndex - 1;
-      this.nextIndex = currentIndex + 1;
-    }
-  },
-  mounted: function mounted() {
-    this.startInter();
-  },
-
-  methods: {
-    __touchstart: function __touchstart(evt) {
-      // 如果正在作动画,不作响应
-      if (this.isAnimating) {
-        return;
-      }
-
-      var touch = evt.targetTouches ? evt.targetTouches[0] : evt;
-
-      // 记录触摸开始位置
-      this.startX = touch.pageX;
-      this.startY = touch.pageY;
-
-      // 重置swipSpan
-      this.swipSpan = 0;
-      // 重置手指拖拽移动
-      this.isMoving = false;
-      // 禁用动画
-      this.notrans = true;
-
-      // 停止定时器
-      this.stopInter();
-    },
-    __touchmove: function __touchmove(evt) {
-      // 如果正在作动画,不作响应
-      if (this.isAnimating) {
-        evt.preventDefault();
-        evt.stopPropagation();
-        return;
-      }
-
-      var touch = evt.targetTouches ? evt.targetTouches[0] : evt;
-      // x轴滑动距离
-      var swipSpanX = touch.pageX - this.startX;
-      var absX = Math.abs(swipSpanX);
-      // y轴滑动距离
-      var swipSpanY = touch.pageY - this.startY;
-      var absY = Math.abs(swipSpanY);
-
-      // x轴滑动距离大于y轴 y轴滑动距离小于阈值, 说明的确是左右滑动
-      if (this.isMoving || absY < absX || absY < this.swipSpanThreshold) {
-        evt.preventDefault();
-        evt.stopPropagation();
-
-        // 不能循环滚动
-        if (!this.isLoop) {
-          var currentIndex = this.currentIndex;
-          // 第一张图或最后一张图
-
-          if (currentIndex === 0 && swipSpanX > 0 || currentIndex === this.dataList.length - 1 && swipSpanX < 0) {
-            // 模拟拉不动操作体验
-            swipSpanX /= this.pullRatio;
-          }
-        }
-
-        // 位移
-        this.currentTranslate = (this.swipSpan = swipSpanX) + 'px';
-        // 已经满足滚动条件,且正在手指拖动
-        this.isMoving = true;
-      }
-    },
-    __touchend: function __touchend() {
-      // 如果正在作动画,不作响应
-      if (this.isAnimating) {
-        return;
-      }
-
-      var swipSpan = this.swipSpan,
-          swipThreshold = this.swipThreshold,
-          currentIndex = this.currentIndex;
-
-      var direction = void 0;
-
-      // 向左
-      if (swipSpan < -swipThreshold) {
-        // 不能循环滚动
-        if (!this.isLoop) {
-          // 不是最后一帧
-          currentIndex !== this.dataList.length - 1 && (direction = FORWARD);
-        } else {
-          direction = FORWARD;
-        }
-      }
-      // 向右
-      else if (swipSpan > swipThreshold) {
-          // 不能循环滚动
-          if (!this.isLoop) {
-            // 不是第一帧
-            currentIndex !== 0 && (direction = BACK);
-          } else {
-            direction = BACK;
-          }
-        }
-      // 滚动
-      swipSpan && this.slide(direction);
-
-      // 开始定时器
-      this.startInter();
-    },
-    __pagerClick: function __pagerClick(index) {
-      this.slideToIndex(index);
-    },
-    __wrapClick: function __wrapClick() {
-      this.$emit('click', this.currentIndex);
-    },
-
-
-    // 滚动
-    slide: function slide(direction, index) {
-      var _this = this;
-
-      // 正在动画
-      this.isAnimating = true;
-
-      // 判断滚动方向
-      switch (direction) {
-        // 向左
-        case FORWARD:
-        // 向右
-        case BACK:
-          {
-            // 方向状态
-            this.direction = direction;
-            // 作动画
-            this.currentTranslate = this.$el.offsetWidth * direction + 'px';
-
-            // index值为undefined
-            index === undefined && (index = this.currentIndex - direction);
-
-            // 触发slide事件
-            this.$emit('slide', index, direction);
-            break;
-          }
-        // 没有direction值(说明滑动没有超过swipSpanThreshold)
-        default:
-          {
-            this.currentTranslate = 0;
-            this.direction = 0;
-          }
-      }
-
-      // 复位
-      setTimeout(function () {
-        // 复位(更新内容)
-        _this.reset(index);
-      }, this.duration);
-    },
-
-    // 复位
-    reset: function reset(index) {
-      // 重置动画状态
-      this.isAnimating = false;
-
-      // 如无index
-      if (index === undefined) {
-        return;
-      }
-
-      // 复位
-      this.currentTranslate = 0;
-
-      // 计算index
-      var count = this.dataList.length;
-      if (index < 0) {
-        index = count - 1;
-      }
-      if (index === count) {
-        index = 0;
-      }
-      // 更新index(更新内容)
-      this.currentIndex = index;
-    },
-
-    // 滑动到第几帧
-    slideToIndex: function slideToIndex(index) {
-      var currentIndex = this.currentIndex;
-      // index不符合条件
-
-      if (typeof index !== 'number' || index < 0 || index >= this.dataList.length || index === currentIndex) {
-        return;
-      }
-
-      // 滑动方向
-      var direction = void 0;
-      // 向左
-      if (index > currentIndex) {
-        direction = FORWARD;
-        this.nextIndex = index;
-      }
-      // 向右
-      else {
-          direction = BACK;
-          this.prevIndex = index;
-        }
-      // 滑动操作
-      this.slide(direction, index);
-    },
-
-    // 开始定时器
-    startInter: function startInter() {
-      var _this2 = this;
-
-      var autoPlayTimeout = this.autoPlayTimeout;
-
-      if (autoPlayTimeout) {
-        this.inter = setInterval(function () {
-          _this2.slide(FORWARD);
-        }, autoPlayTimeout);
-      }
-    },
-
-    // 停止定定时器
-    stopInter: function stopInter() {
-      clearInterval(this.inter);
-    },
-
-    // 获取图片样式
-    getImgStyle: function getImgStyle(data) {
-      return data && { backgroundImage: 'url(' + data + ')' };
-    }
-  }
-};
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-exports.default = {
-  props: {
-    // 宽度
-    width: {
-      default: '280px'
-    },
-    // 标题
-    title: {
-      default: '提示'
-    },
-    // 确定按钮文案
-    btnOkText: {
-      default: '确定'
-    },
-    // 确定按钮点击事件
-    btnOkClick: {
-      default: null
-    },
-    // 取消按钮文案
-    btnCancelText: {
-      default: '取消'
-    },
-    // 取消按钮点击事件
-    btnCancelClick: {
-      default: null
-    },
-    // 是否添加到全局变量
-    isGlobal: {
-      default: false
-    }
-  },
-  data: function data() {
-    return {
-      msg: '',
-      visible: false
-    };
-  },
-
-  computed: {
-    _class: function _class() {
-      return {
-        visible: this.visible
-      };
-    },
-    _boxStyle: function _boxStyle() {
-      return {
-        width: this.width
-      };
-    }
-  },
-  created: function created() {
-    // 初始配置
-    this.defaults = Object.assign({}, this._props);
-    this.isGlobal && (window.confirm = this.show);
-  },
-
-  methods: {
-    show: function show(opts) {
-      // 配置项
-      (typeof opts === 'undefined' ? 'undefined' : _typeof(opts)) === 'object' || (opts = { msg: opts });
-      // 配置项合并
-      Object.assign(this, this.defaults, opts);
-      // 显示
-      this.visible = true;
-    },
-    __btnOkClick: function __btnOkClick() {
-      this.visible = false;
-      var btnOkClick = this.btnOkClick;
-
-      typeof btnOkClick === 'function' && btnOkClick();
-    },
-    __btnCancelClick: function __btnCancelClick() {
-      this.visible = false;
-      var btnCancelClick = this.btnCancelClick;
-
-      typeof btnCancelClick === 'function' && btnCancelClick();
-    }
-  }
-};
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-exports.default = {
-  props: {
-    // 宽度
-    width: {
-      default: '100%'
-    },
-    // 高度
-    height: {
-      default: '100%'
-    },
-    // 是否水平方向滚动
-    isHorizontal: {
-      default: false
-    },
-    // 滑动距离阈值
-    swipSpanThreshold: {
-      default: 6
-    },
-    // 滑动阈值
-    swipThreshold: {
-      default: 50
-    },
-    // 动画时长
-    duration: {
-      default: 400
-    },
-    // first和last拉不动的比率
-    pullRatio: {
-      default: 2
-    },
-    // 默认滚动索引
-    index: {
-      default: 0
-    },
-    // 是否显示页脚
-    isShowPager: {
-      default: true
-    },
-    // 是否显示loading
-    isShowLoading: {
-      default: true
-    },
-    // 自动播放间隔
-    autoPlayTimeout: {
-      // 默认为0,表示禁用自动播放
-      default: 0
-    }
-  },
-  data: function data() {
-    return {
-      // 禁用动画
-      notrans: false,
-      // 滑动距离
-      swipSpan: 0,
-      // 滚动索引
-      currentIndex: this.index,
-      // translate
-      currentTranslate: 0
-    };
-  },
-
-  computed: {
-    items: function items() {
-      return this.$slots.default.filter(function (item) {
-        return item.tag;
-      });
-    },
-    _class: function _class() {
-      return {
-        notrans: this.notrans,
-        'pi-loading': this.isShowLoading,
-        horizontal: this.isHorizontal
-      };
-    },
-    _style: function _style() {
-      return {
-        width: this.width,
-        height: this.height
-      };
-    },
-    _wrapStyle: function _wrapStyle() {
-      var currentTranslate = this.currentTranslate,
-          currentIndex = this.currentIndex,
-          isHorizontal = this.isHorizontal,
-          $el = this.$el,
-          items = this.items;
-      var swipSpan = this.swipSpan;
-
-      var itemCount = items.length;
-
-      var translate = void 0;
-      // touchmove跟手指滚动
-      if (swipSpan) {
-        // 起点或者终点
-        if (currentIndex === 0 && swipSpan > 0 || currentIndex === itemCount - 1 && swipSpan < 0) {
-          // 模拟拉不动的操作体验
-          swipSpan /= this.pullRatio;
-        }
-        translate = currentTranslate + swipSpan;
-      }
-      // touchend时滚动动画
-      else if ($el) {
-          // 计算出滑动值
-          var itemSpan = isHorizontal ? $el.offsetWidth : $el.offsetHeight;
-          translate = this.currentTranslate = -currentIndex * itemSpan;
-
-          // items的状态
-          items.forEach(function (item, index) {
-            var itemEl = item.elm;
-            index === currentIndex ? itemEl.setAttribute('current', '') : itemEl.removeAttribute('current');
-          });
-        }
-
-      // 样式对象
-      var style = {
-        transform: 'translate3d(' + (isHorizontal ? translate + 'px,0,0' : '0,' + translate + 'px,0') + ')',
-        transitionDuration: this.duration / 1000 + 's'
-      };
-
-      // 容器的高度或宽度
-      var size = itemCount * 100 + '%';
-      // 水平方向
-      if (isHorizontal) {
-        style.width = size;
-      }
-      // 竖直方向
-      else {
-          style.height = size;
-        }
-
-      return style;
-    }
-  },
-  mounted: function mounted() {
-    // 初始化slots
-    this.initSlots();
-    // 初始化timer
-    this.startInter();
-  },
-
-  methods: {
-    // 初始化slots
-    initSlots: function initSlots() {
-      var _this = this;
-
-      var $el = this.$el,
-          currentIndex = this.currentIndex;
-
-      // 遍历
-
-      this.items.forEach(function (item, index) {
-        var itemEl = item.elm;
-
-        // current状态
-        index === currentIndex && itemEl.setAttribute('current', '');
-
-        // 计算出初始滑动值
-        if (currentIndex > 0) {
-          var itemSpan = _this.isHorizontal ? $el.offsetWidth : $el.offsetHeight;
-          _this.currentTranslate = -currentIndex * itemSpan;
-        }
-      });
-    },
-    __touchstart: function __touchstart(evt) {
-      var touch = evt.targetTouches ? evt.targetTouches[0] : evt;
-
-      // 记录触摸开始位置
-      this.startX = touch.pageX;
-      this.startY = touch.pageY;
-
-      // 重置swipSpan
-      this.swipSpan = 0;
-      // 重置手指拖拽移动
-      this.isMoving = false;
-      // 禁用动画
-      this.notrans = true;
-
-      // 停止定时器
-      this.stopInter();
-    },
-    __touchmove: function __touchmove(evt) {
-      var touch = evt.targetTouches ? evt.targetTouches[0] : evt;
-      // x轴滑动距离
-      var swipSpanX = touch.pageX - this.startX;
-      var absX = Math.abs(swipSpanX);
-      // y轴滑动距离
-      var swipSpanY = touch.pageY - this.startY;
-      var absY = Math.abs(swipSpanY);
-
-      // 左右
-      if (this.isHorizontal) {
-        // x轴滑动距离大于y轴 y轴滑动距离小于阈值,说明的确是左右滑动
-        if (this.isMoving || absY < absX || absY < this.swipSpanThreshold) {
-          evt.preventDefault();
-          evt.stopPropagation();
-          this.swipSpan = swipSpanX;
-          // 已经满足滚动条件,且正在手指拖动
-          this.isMoving = true;
-        }
-      }
-      // 上下
-      else {
-          // y轴滑动距离大于x轴 x轴滑动距离小于阈值,说明的确是上下滑动
-          if (this.isMoving || absX < absY || absX < this.swipSpanThreshold) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            this.swipSpan = swipSpanY;
-            // 已经满足滚动条件,且正在手指拖动
-            this.isMoving = true;
-          }
-        }
-    },
-    __touchend: function __touchend() {
-      var swipSpan = this.swipSpan,
-          swipThreshold = this.swipThreshold,
-          items = this.items,
-          currentIndex = this.currentIndex;
-
-      var itemCount = items.length;
-
-      // 向右,下
-      if (swipSpan > swipThreshold) {
-        // 非起点
-        if (currentIndex !== 0) {
-          --this.currentIndex;
-        }
-      }
-      // 向左,上
-      else if (swipSpan < -swipThreshold) {
-          // 非终点
-          if (currentIndex !== itemCount - 1) {
-            ++this.currentIndex;
-          }
-        }
-
-      // 加上动画
-      this.notrans = false;
-      // 重置swipSpan
-      this.swipSpan = 0;
-
-      // 开始定时器
-      this.startInter();
-    },
-    __pagerClick: function __pagerClick(index) {
-      this.slideToIndex(index);
-    },
-    __wrapClick: function __wrapClick() {
-      this.$emit('click', this.currentIndex);
-    },
-
-
-    // 滑动到第几帧
-    slideToIndex: function slideToIndex(index) {
-      // index不符合条件
-      if (typeof index !== 'number' || index < 0 || index >= this.items.length) {
-        return;
-      }
-      this.currentIndex = index;
-    },
-
-    // 开始定时器
-    startInter: function startInter() {
-      var _this2 = this;
-
-      var autoPlayTimeout = this.autoPlayTimeout;
-
-      var itemCount = this.items.length;
-
-      // 自动播放开启
-      if (autoPlayTimeout) {
-        this.inter = setInterval(function () {
-          // 最后一帧
-          if (_this2.currentIndex === itemCount - 1) {
-            _this2.currentIndex = 0;
-          } else {
-            ++_this2.currentIndex;
-          }
-        }, autoPlayTimeout);
-      }
-    },
-
-    // 停止定定时器
-    stopInter: function stopInter() {
-      clearInterval(this.inter);
-    }
-  }
-};
-
-/***/ }),
-/* 29 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-exports.default = {
-  props: {
-    // 宽度
-    width: {
-      default: '280px'
-    },
-    // 显示时长
-    timeout: {
-      default: 2000
-    },
-    // 是否添加到全局变量
-    isGlobal: {
-      default: false
-    }
-  },
-  data: function data() {
-    return {
-      msg: '',
-      visible: false,
-      inter: null
-    };
-  },
-
-  computed: {
-    _style: function _style() {
-      var width = this.width;
-
-      return {
-        width: width,
-        marginLeft: -parseInt(width, 10) / 2 + 'px'
-      };
-    },
-    _class: function _class() {
-      return {
-        visible: this.visible
-      };
-    }
-  },
-  created: function created() {
-    this.isGlobal && (window.tooltip = this.show);
-  },
-
-  methods: {
-    show: function show(msg, timeout) {
-      var _this = this;
-
-      this.msg = msg;
-      this.visible = true;
-
-      // 延迟消失
-      clearTimeout(this.inter);
-      this.inter = setTimeout(function () {
-        _this.visible = false;
-      }, timeout || this.timeout);
-    }
-  }
-};
-
-/***/ }),
-/* 30 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _PiCard = __webpack_require__(48);
-
-var _PiCard2 = _interopRequireDefault(_PiCard);
-
-var _request = __webpack_require__(23);
-
-var _request2 = _interopRequireDefault(_request);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-exports.default = {
-  components: {
-    PiCard: _PiCard2.default
-  },
-  data: function data() {
-    return {
-      dataList: ['https://soneway.github.io/jq/example/dist/img/1.jpg', 'https://soneway.github.io/jq/example/dist/img/2.jpg', 'https://soneway.github.io/jq/example/dist/img/3.jpg', 'https://soneway.github.io/jq/example/dist/img/4.jpg', 'https://soneway.github.io/jq/example/dist/img/5.jpg']
-    };
-  },
-  mounted: function mounted() {},
-
-  methods: {}
-};
-
-/***/ }),
-/* 31 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _PiCarousel = __webpack_require__(22);
-
-var _PiCarousel2 = _interopRequireDefault(_PiCarousel);
-
-var _request = __webpack_require__(23);
-
-var _request2 = _interopRequireDefault(_request);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
-function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; } //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-exports.default = {
-  components: {
-    PiCarousel: _PiCarousel2.default
-  },
-  data: function data() {
-    return {
-      dataList: []
-    };
-  },
-  mounted: function mounted() {
-    this.initImgs();
-    this.initEvent();
-  },
-
-  methods: {
-    initImgs: function () {
-      var _ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee() {
-        var imgs;
-        return regeneratorRuntime.wrap(function _callee$(_context) {
-          while (1) {
-            switch (_context.prev = _context.next) {
-              case 0:
-                _context.next = 2;
-                return _request2.default.getImgs();
-
-              case 2:
-                imgs = _context.sent;
-
-                if (imgs) {
-                  _context.next = 5;
-                  break;
-                }
-
-                return _context.abrupt('return', console.log('网络请求失败'));
-
-              case 5:
-                this.dataList = imgs;
-
-              case 6:
-              case 'end':
-                return _context.stop();
-            }
-          }
-        }, _callee, this);
-      }));
-
-      function initImgs() {
-        return _ref.apply(this, arguments);
-      }
-
-      return initImgs;
-    }(),
-    initEvent: function initEvent() {
-      var _this = this;
-
-      this.$refs.carousel.$on('slide', function () {
-        var _ref2 = _asyncToGenerator(regeneratorRuntime.mark(function _callee2(index, direction) {
-          var _dataList, imgs;
-
-          return regeneratorRuntime.wrap(function _callee2$(_context2) {
-            while (1) {
-              switch (_context2.prev = _context2.next) {
-                case 0:
-                  if (!(index === _this.dataList.length - 1 && direction === -1)) {
-                    _context2.next = 5;
-                    break;
-                  }
-
-                  _context2.next = 3;
-                  return _request2.default.getImgs();
-
-                case 3:
-                  imgs = _context2.sent;
-
-                  imgs && (_dataList = _this.dataList).push.apply(_dataList, _toConsumableArray(imgs));
-
-                case 5:
-                case 'end':
-                  return _context2.stop();
-              }
-            }
-          }, _callee2, _this);
-        }));
-
-        return function (_x, _x2) {
-          return _ref2.apply(this, arguments);
-        };
-      }());
-    }
-  }
-};
-
-/***/ }),
-/* 32 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _PiAlert = __webpack_require__(47);
-
-var _PiAlert2 = _interopRequireDefault(_PiAlert);
-
-var _PiTooltip = __webpack_require__(51);
-
-var _PiTooltip2 = _interopRequireDefault(_PiTooltip);
-
-var _PiConfirm = __webpack_require__(49);
-
-var _PiConfirm2 = _interopRequireDefault(_PiConfirm);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = {
-  components: {
-    PiAlert: _PiAlert2.default,
-    PiConfirm: _PiConfirm2.default,
-    PiTooltip: _PiTooltip2.default
-  },
-  mounted: function mounted() {},
-
-  methods: {
-    __alertClick: function __alertClick() {
-      this.$refs.alert.show({
-        msg: 'alert\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8' + Date.now(),
-        title: 'alert title',
-        btnOkClick: function btnOkClick() {
-          console.log('alert btnOkClick');
-        }
-      });
-    },
-    __confirmClick: function __confirmClick() {
-      this.$refs.confirm.show({
-        msg: 'confirm\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8' + Date.now(),
-        title: 'confirm title',
-        btnOkText: '好',
-        btnOkClick: function btnOkClick() {
-          console.log('confirm btnOkClick');
-        },
-
-        btnCancelText: 'cancel',
-        btnCancelClick: function btnCancelClick() {
-          console.log('confirm btnCancelClick');
-        }
-      });
-    },
-    __tooltipClick: function __tooltipClick() {
-      this.$refs.tooltip.show('\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8\u54C8' + Date.now());
-    }
-  }
-}; //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/***/ }),
-/* 33 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _PiSlider = __webpack_require__(50);
-
-var _PiSlider2 = _interopRequireDefault(_PiSlider);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = {
-  components: {
-    PiSlider: _PiSlider2.default
-  },
-  mounted: function mounted() {},
-
-  methods: {}
-}; //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/***/ }),
-/* 34 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _PiCarousel = __webpack_require__(22);
-
-var _PiCarousel2 = _interopRequireDefault(_PiCarousel);
-
-var _data = __webpack_require__(80);
-
-var _data2 = _interopRequireDefault(_data);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-exports.default = {
-  components: {
-    PiCarousel: _PiCarousel2.default
-  },
-  created: function created() {
-
-    // 将data中的数据覆盖
-    Object.assign(this, _data2.default);
-  },
-  data: function data() {
-    return {
-      thumbIndex: 0,
-      dataList: [],
-      titleInfo: {}
-    };
-  },
-  mounted: function mounted() {
-    var _this = this;
-
-    // carousel插件滚动事件
-    this.$refs.carousel.$on('slide', function (index) {
-      _this.thumbSlide(index);
-    });
-  },
-
-  methods: {
-    // 缩略图滚动
-    thumbSlide: function thumbSlide(index) {
-      if (index === this.thumbIndex) {
-        return;
-      }
-      this.thumbIndex = index;
-      this.$refs.carousel.slideToIndex(index);
-      this.center(index);
-    },
-    __thumbClick: function __thumbClick(index) {
-      this.thumbSlide(index);
-    },
-
-    // 缩略图居中
-    center: function center(index) {
-      var thumbWrap = this.$refs.thumbWrap;
-
-      var thumbEl = document.querySelector('.thumb:nth-of-type(' + (index + 1) + ')');
-      thumbWrap.scrollLeft = thumbEl.offsetLeft - (thumbWrap.offsetWidth - thumbEl.offsetWidth) / 2;
-    }
-  }
-};
-
-/***/ }),
-/* 35 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-// 获取uid函数
-var getUid = function () {
-  var uid = 0;
-  return function () {
-    return ++uid;
-  };
-}();
-
-// 获取?或者&号
-function getSymbol(url) {
-  return url.indexOf('?') < 0 ? '?' : '&';
-}
-
-// 判断是否为function函数
-function isFunction(fn) {
-  return typeof fn === 'function';
-}
-
-// 加载js函数
-var getScript = function () {
-  var headEl = document.head;
-  var jsReg = /(\.js)$/;
-
-  return function (url, fn) {
-    var isJs = jsReg.test(url);
-    var scriptEl = document.createElement('script');
-
-    // type
-    scriptEl.type = 'text/javascript';
-
-    // onload
-    scriptEl.onload = function () {
-      isFunction(fn) && fn();
-      isJs || headEl.removeChild(scriptEl);
-    };
-
-    // onerror
-    scriptEl.onerror = function (err) {
-      isFunction(fn) && fn(err);
-    };
-
-    // 请求
-    scriptEl.src = url;
-    headEl.appendChild(scriptEl);
-  };
-}();
-
-// get数据函数
-function get(opts) {
-  // 配置项
-  opts = Object.assign({}, get.defaults, opts);
-  var _opts = opts,
-      url = _opts.url,
-      data = _opts.data;
-  // callback可用于统计
-
-  var _opts2 = opts,
-      success = _opts2.success,
-      error = _opts2.error,
-      callback = _opts2.callback;
-
-  // url判断
-
-  if (!url) {
-    return console.error('请求的url不能为空');
-  }
-
-  // 回调函数名
-  var cbName = 'jsonpcb' + getUid();
-
-  // 将回调函数添加到全局变量
-  window[cbName] = function (rs) {
-    // 回调
-    isFunction(success) && success(rs);
-    isFunction(callback) && callback(opts, rs);
-    // 释放回调函数
-    window[cbName] = null;
-  };
-
-  // url中添加callback
-  Object.assign(data || (data = {}), {
-    callback: cbName
-  });
-
-  // 拼接data
-  if (data) {
-    url += getSymbol(url) + Object.keys(data).map(function (item) {
-      return item + '=' + encodeURIComponent(data[item]);
-    }).join('&');
-  }
-
-  // 发起请求
-  getScript(url, function (err) {
-    // js加载出错
-    if (err) {
-      // 回调
-      isFunction(error) && error(err);
-      isFunction(callback) && callback(opts);
-      // 释放回调函数
-      window[cbName] = null;
-    }
-  });
-}
-// get数据默认配置项
-get.defaults = {};
-
-// post数据函数
-var post = function () {
-  // 回调函数对象
-  var msgcb = {};
-  var bodyEl = document.body;
-  // 临时元素
-  var tmpEl = document.createElement('div');
-
-  // 绑定消息事件
-  window.addEventListener('message', function (evt) {
-    var data = evt.data;
-
-    // data转对象
-
-    (typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object' || (data = JSON.parse(data || null) || {});
-
-    // 回调函数
-    var callback = msgcb[data.id];
-    isFunction(callback) && callback(data.rs);
-  });
-
-  return function (opts) {
-    // 配置项
-    opts = Object.assign({}, post.defaults, opts);
-    var _opts3 = opts,
-        success = _opts3.success,
-        error = _opts3.error,
-        callback = _opts3.callback,
-        formSelector = _opts3.formSelector,
-        url = _opts3.url,
-        method = _opts3.method,
-        data = _opts3.data,
-        enctype = _opts3.enctype;
-
-    // iframe元素
-
-    var ifrId = 'postifr' + getUid();
-    tmpEl.innerHTML = '<iframe name="' + ifrId + '" style="display: none;"></iframe>';
-    var ifrEl = tmpEl.childNodes[0];
-    bodyEl.appendChild(ifrEl);
-
-    // form元素
-    var formEl = void 0;
-    // 页面中已存在的form提交
-    if (formSelector) {
-      formEl = document.querySelector(formSelector);
-      // 请求url中添加callback信息
-      var _formEl = formEl,
-          action = _formEl.action;
-
-      formEl.action = action + getSymbol(action) + 'msgcb=' + ifrId;
-    }
-    // 动态生成的form提交
-    else {
-        // 请求url
-        var _action = url + getSymbol(url) + 'msgcb=' + ifrId;
-        // 数据添加到form的input
-        var inputHtml = data && Object.keys(data).map(function (key) {
-          return '<input type="hidden" name="' + key + '" value="' + data[key] + '"/>';
-        }).join('');
-        tmpEl.innerHTML = '<form style="display: none;" method="' + method + '" action="' + _action + '">' + inputHtml + '</form>';
-        formEl = tmpEl.childNodes[0];
-      }
-    // target
-    formEl.target = ifrId;
-    // enctype
-    enctype && (formEl.enctype = enctype);
-
-    // message事件响应函数
-    msgcb[ifrId] = function (rs) {
-      // 回调
-      isFunction(success) && success(rs);
-      isFunction(callback) && callback(opts, rs);
-      // 释放回调函数
-      msgcb[ifrId] = null;
-
-      // 删除节点
-      bodyEl.removeChild(ifrEl);
-      formSelector || bodyEl.removeChild(formEl);
-    };
-
-    // iframe onload事件,主要处理请求失败
-    ifrEl.onload = function () {
-      // 延迟运行
-      setTimeout(function () {
-        // 如果回调还在,说明没有成功回调,即发生错误
-        if (msgcb[ifrId]) {
-          // 回调
-          isFunction(error) && error();
-          isFunction(callback) && callback(opts);
-          // 释放回调函数
-          msgcb[ifrId] = null;
-
-          // 删除节点
-          bodyEl.removeChild(ifrEl);
-          formSelector || bodyEl.removeChild(formEl);
-        }
-      }, 100);
-    };
-
-    // 提交
-    formSelector || bodyEl.appendChild(formEl);
-    formEl.submit();
-  };
-}();
-// post数据默认配置项
-post.defaults = {
-  method: 'POST'
-};
-
-exports.default = {
-  // 加载js函数
-  getScript: getScript,
-  // get数据函数
-  get: get,
-  // post数据函数
-  post: post
-};
-
-/***/ }),
-/* 36 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n.pi-card {\n  -webkit-transform: scale3d(0.68, 0.68, 1);\n          transform: scale3d(0.68, 0.68, 1);\n  /*样式覆盖*/\n  /*动画状态,且左右切换*/\n}\n.pi-card.pi-card {\n    overflow: visible;\n}\n.pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item {\n    -webkit-transition: all ease 0.4s;\n    transition: all ease 0.4s;\n    /*动画中的当前元素缩小小*/\n}\n.pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item:nth-of-type(2) {\n      -webkit-transform: scale3d(0.68, 0.68, 1);\n              transform: scale3d(0.68, 0.68, 1);\n}\n.pi-card .pi-item {\n    /*非当前元素*/\n}\n.pi-card .pi-item:nth-of-type(1), .pi-card .pi-item:nth-of-type(3) {\n      /*非临时当前元素缩小*/\n}\n.pi-card .pi-item:nth-of-type(1):not(.temp-current), .pi-card .pi-item:nth-of-type(3):not(.temp-current) {\n        -webkit-transform: scale3d(0.68, 0.68, 1);\n                transform: scale3d(0.68, 0.68, 1);\n}\n", "", {"version":3,"sources":["/./src/component/PiCard.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB;EACE,0CAAkC;UAAlC,kCAAkC;EAClC,QAAQ;EACR,cAAc;CAAE;AAChB;IACE,kBAAkB;CAAE;AACtB;IACE,kCAA0B;IAA1B,0BAA0B;IAC1B,eAAe;CAAE;AACjB;MACE,0CAAkC;cAAlC,kCAAkC;CAAE;AACxC;IACE,SAAS;CAAE;AACX;MACE,aAAa;CAAE;AACf;QACE,0CAAkC;gBAAlC,kCAAkC;CAAE","file":"PiCard.vue","sourcesContent":["@charset \"UTF-8\";\n.pi-card {\n  transform: scale3d(0.68, 0.68, 1);\n  /*样式覆盖*/\n  /*动画状态,且左右切换*/ }\n  .pi-card.pi-card {\n    overflow: visible; }\n  .pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item {\n    transition: all ease 0.4s;\n    /*动画中的当前元素缩小小*/ }\n    .pi-card.pi-animating:not([data-direction=\"0\"]) .pi-item:nth-of-type(2) {\n      transform: scale3d(0.68, 0.68, 1); }\n  .pi-card .pi-item {\n    /*非当前元素*/ }\n    .pi-card .pi-item:nth-of-type(1), .pi-card .pi-item:nth-of-type(3) {\n      /*非临时当前元素缩小*/ }\n      .pi-card .pi-item:nth-of-type(1):not(.temp-current), .pi-card .pi-item:nth-of-type(3):not(.temp-current) {\n        transform: scale3d(0.68, 0.68, 1); }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 37 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  -webkit-user-select: none;\n          user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch;\n}\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit;\n}\ninput, textarea {\n  /*输入框可选中文本*/\n  -webkit-user-select: text;\n          user-select: text;\n}\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle;\n}\nimg {\n  /*图片无边框*/\n  border: none;\n}\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n}\nli {\n  list-style: none;\n}\ni {\n  font-style: normal;\n}\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  padding: 20px;\n}\n.wrapper > a {\n    display: inline-block;\n    line-height: 200%;\n    padding: 0 1em;\n    border: 1px solid #09f;\n    color: #09f;\n    border-radius: 0.3em;\n}\n.wrapper > a:active {\n      background: #eee;\n}\n", "", {"version":3,"sources":["/./src/view/Msgbox.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,kBAAkB;AAClB;EACE,UAAU;EACV,WAAW;EACX,uBAAuB;CAAE;AAE3B;EACE,mBAAmB;EACnB,OAAO;EACP,YAAY;EACZ,gBAAgB;EAChB,mCAAmC;EACnC,+BAA+B;EAC/B,UAAU;EACV,0BAAkB;UAAlB,kBAAkB;EAClB,yBAAyB;EACzB,yCAAyC;EACzC,UAAU;EACV,4BAA4B;EAC5B,QAAQ;EACR,kCAAkC;CAAE;AAEtC;EACE,eAAe;EACf,mBAAmB;CAAE;AAEvB;EACE,YAAY;EACZ,0BAAkB;UAAlB,kBAAkB;CAAE;AAEtB;EACE,eAAe;EACf,uBAAuB;CAAE;AAE3B;EACE,SAAS;EACT,aAAa;CAAE;AAEjB;EACE,cAAc;EACd,eAAe;EACf,sBAAsB;EACtB,gBAAgB;CAAE;AAEpB;EACE,iBAAiB;CAAE;AAErB;EACE,mBAAmB;CAAE;AAEvB;EACE,mBAAmB;EACnB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,UAAU;EACV,cAAc;CAAE;AAChB;IACE,sBAAsB;IACtB,kBAAkB;IAClB,eAAe;IACf,uBAAuB;IACvB,YAAY;IACZ,qBAAqB;CAAE;AACvB;MACE,iBAAiB;CAAE","file":"Msgbox.vue","sourcesContent":["@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box; }\n\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch; }\n\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit; }\n\ninput, textarea {\n  /*输入框可选中文本*/\n  user-select: text; }\n\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle; }\n\nimg {\n  /*图片无边框*/\n  border: none; }\n\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer; }\n\nli {\n  list-style: none; }\n\ni {\n  font-style: normal; }\n\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  padding: 20px; }\n  .wrapper > a {\n    display: inline-block;\n    line-height: 200%;\n    padding: 0 1em;\n    border: 1px solid #09f;\n    color: #09f;\n    border-radius: 0.3em; }\n    .wrapper > a:active {\n      background: #eee; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 38 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  -webkit-user-select: none;\n          user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch;\n}\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit;\n}\ninput, textarea {\n  /*输入框可选中文本*/\n  -webkit-user-select: text;\n          user-select: text;\n}\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle;\n}\nimg {\n  /*图片无边框*/\n  border: none;\n}\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n}\nli {\n  list-style: none;\n}\ni {\n  font-style: normal;\n}\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n}\n", "", {"version":3,"sources":["/./src/view/Carousel.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,kBAAkB;AAClB;EACE,UAAU;EACV,WAAW;EACX,uBAAuB;CAAE;AAE3B;EACE,mBAAmB;EACnB,OAAO;EACP,YAAY;EACZ,gBAAgB;EAChB,mCAAmC;EACnC,+BAA+B;EAC/B,UAAU;EACV,0BAAkB;UAAlB,kBAAkB;EAClB,yBAAyB;EACzB,yCAAyC;EACzC,UAAU;EACV,4BAA4B;EAC5B,QAAQ;EACR,kCAAkC;CAAE;AAEtC;EACE,eAAe;EACf,mBAAmB;CAAE;AAEvB;EACE,YAAY;EACZ,0BAAkB;UAAlB,kBAAkB;CAAE;AAEtB;EACE,eAAe;EACf,uBAAuB;CAAE;AAE3B;EACE,SAAS;EACT,aAAa;CAAE;AAEjB;EACE,cAAc;EACd,eAAe;EACf,sBAAsB;EACtB,gBAAgB;CAAE;AAEpB;EACE,iBAAiB;CAAE;AAErB;EACE,mBAAmB;CAAE;AAEvB;EACE,mBAAmB;EACnB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,UAAU;CAAE","file":"Carousel.vue","sourcesContent":["@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box; }\n\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch; }\n\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit; }\n\ninput, textarea {\n  /*输入框可选中文本*/\n  user-select: text; }\n\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle; }\n\nimg {\n  /*图片无边框*/\n  border: none; }\n\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer; }\n\nli {\n  list-style: none; }\n\ni {\n  font-style: normal; }\n\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 39 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n/*loading样式*/\n.loading:before, .pi-carousel.pi-loading .pi-item:before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  margin-left: -20px;\n  margin-top: -20px;\n  border-radius: 40px;\n  /*如.loading元素中还有transform,:before内容将挡不住*/\n  z-index: -1;\n  /*圆环用border生成*/\n  border: 3px solid rgba(136, 136, 136, 0.2);\n  border-left: 3px solid #888888;\n  /*动画*/\n  -webkit-animation: ani_circle 0.8s linear infinite;\n          animation: ani_circle 0.8s linear infinite;\n}\n\n/*旋转动画*/\n@-webkit-keyframes ani_circle {\n0% {\n    -webkit-transform: rotateZ(0deg);\n            transform: rotateZ(0deg);\n}\n100% {\n    -webkit-transform: rotateZ(360deg);\n            transform: rotateZ(360deg);\n}\n}\n@keyframes ani_circle {\n0% {\n    -webkit-transform: rotateZ(0deg);\n            transform: rotateZ(0deg);\n}\n100% {\n    -webkit-transform: rotateZ(360deg);\n            transform: rotateZ(360deg);\n}\n}\n.pi-carousel {\n  overflow: hidden;\n  position: relative;\n  /*可有效减缓闪烁*/\n  -webkit-backface-visibility: hidden;\n          backface-visibility: hidden;\n  /*loading*/\n  /*正在动画*/\n}\n.pi-carousel.pi-animating .pi-wrap {\n    -webkit-transition: -webkit-transform ease 0.4s;\n    transition: -webkit-transform ease 0.4s;\n    transition: transform ease 0.4s;\n    transition: transform ease 0.4s, -webkit-transform ease 0.4s;\n}\n.pi-carousel .pi-wrap {\n    width: 300%;\n    height: 100%;\n    margin-left: -100%;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    /*虽然是默认值,但不能省略,以确保auto-prefixer插件准确生成兼容安卓4.0的代码*/\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row;\n}\n.pi-carousel .pi-item {\n    height: 100%;\n    -webkit-box-flex: 1;\n    -webkit-flex: 1;\n            flex: 1;\n    overflow: hidden;\n}\n.pi-carousel .pi-item .pi-img {\n      background: center center no-repeat;\n      background-size: contain;\n      width: 100%;\n      height: 100%;\n}\n.pi-carousel .pi-pager {\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    text-align: center;\n    font-size: 0;\n    line-height: 20px;\n}\n.pi-carousel .pi-pager > span {\n      border: 3px solid #bbb;\n      border-radius: 50%;\n      margin: 0 2px;\n}\n.pi-carousel .pi-pager > span.selected {\n        border-color: #555;\n}\n", "", {"version":3,"sources":["/./src/component/PiCarousel.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,aAAa;AACb;EACE,YAAY;EACZ,mBAAmB;EACnB,UAAU;EACV,SAAS;EACT,YAAY;EACZ,aAAa;EACb,mBAAmB;EACnB,kBAAkB;EAClB,oBAAoB;EACpB,yCAAyC;EACzC,YAAY;EACZ,eAAe;EACf,2CAA2C;EAC3C,+BAA+B;EAC/B,MAAM;EACN,mDAA2C;UAA3C,2CAA2C;CAAE;;AAE/C,QAAQ;AACR;AACE;IACE,iCAAyB;YAAzB,yBAAyB;CAAE;AAC7B;IACE,mCAA2B;YAA3B,2BAA2B;CAAE;CAAE;AAJnC;AACE;IACE,iCAAyB;YAAzB,yBAAyB;CAAE;AAC7B;IACE,mCAA2B;YAA3B,2BAA2B;CAAE;CAAE;AAEnC;EACE,iBAAiB;EACjB,mBAAmB;EACnB,WAAW;EACX,oCAA4B;UAA5B,4BAA4B;EAC5B,WAAW;EACX,QAAQ;CAAE;AACV;IACE,gDAAgC;IAAhC,wCAAgC;IAAhC,gCAAgC;IAAhC,6DAAgC;CAAE;AACpC;IACE,YAAY;IACZ,aAAa;IACb,mBAAmB;IACnB,qBAAc;IAAd,sBAAc;IAAd,cAAc;IACd,iDAAiD;IACjD,+BAAoB;IAApB,8BAAoB;IAApB,4BAAoB;YAApB,oBAAoB;CAAE;AACxB;IACE,aAAa;IACb,oBAAQ;IAAR,gBAAQ;YAAR,QAAQ;IACR,iBAAiB;CAAE;AACnB;MACE,oCAAoC;MACpC,yBAAyB;MACzB,YAAY;MACZ,aAAa;CAAE;AACnB;IACE,mBAAmB;IACnB,QAAQ;IACR,SAAS;IACT,UAAU;IACV,mBAAmB;IACnB,aAAa;IACb,kBAAkB;CAAE;AACpB;MACE,uBAAuB;MACvB,mBAAmB;MACnB,cAAc;CAAE;AAChB;QACE,mBAAmB;CAAE","file":"PiCarousel.vue","sourcesContent":["@charset \"UTF-8\";\n/*loading样式*/\n.loading:before, .pi-carousel.pi-loading .pi-item:before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  margin-left: -20px;\n  margin-top: -20px;\n  border-radius: 40px;\n  /*如.loading元素中还有transform,:before内容将挡不住*/\n  z-index: -1;\n  /*圆环用border生成*/\n  border: 3px solid rgba(136, 136, 136, 0.2);\n  border-left: 3px solid #888888;\n  /*动画*/\n  animation: ani_circle 0.8s linear infinite; }\n\n/*旋转动画*/\n@keyframes ani_circle {\n  0% {\n    transform: rotateZ(0deg); }\n  100% {\n    transform: rotateZ(360deg); } }\n\n.pi-carousel {\n  overflow: hidden;\n  position: relative;\n  /*可有效减缓闪烁*/\n  backface-visibility: hidden;\n  /*loading*/\n  /*正在动画*/ }\n  .pi-carousel.pi-animating .pi-wrap {\n    transition: transform ease 0.4s; }\n  .pi-carousel .pi-wrap {\n    width: 300%;\n    height: 100%;\n    margin-left: -100%;\n    display: flex;\n    /*虽然是默认值,但不能省略,以确保auto-prefixer插件准确生成兼容安卓4.0的代码*/\n    flex-direction: row; }\n  .pi-carousel .pi-item {\n    height: 100%;\n    flex: 1;\n    overflow: hidden; }\n    .pi-carousel .pi-item .pi-img {\n      background: center center no-repeat;\n      background-size: contain;\n      width: 100%;\n      height: 100%; }\n  .pi-carousel .pi-pager {\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    text-align: center;\n    font-size: 0;\n    line-height: 20px; }\n    .pi-carousel .pi-pager > span {\n      border: 3px solid #bbb;\n      border-radius: 50%;\n      margin: 0 2px; }\n      .pi-carousel .pi-pager > span.selected {\n        border-color: #555; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 40 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  -webkit-user-select: none;\n          user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch;\n}\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit;\n}\ninput, textarea {\n  /*输入框可选中文本*/\n  -webkit-user-select: text;\n          user-select: text;\n}\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle;\n}\nimg {\n  /*图片无边框*/\n  border: none;\n}\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n}\nli {\n  list-style: none;\n}\ni {\n  font-style: normal;\n}\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  overflow: hidden;\n}\n", "", {"version":3,"sources":["/./src/view/Card.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,kBAAkB;AAClB;EACE,UAAU;EACV,WAAW;EACX,uBAAuB;CAAE;AAE3B;EACE,mBAAmB;EACnB,OAAO;EACP,YAAY;EACZ,gBAAgB;EAChB,mCAAmC;EACnC,+BAA+B;EAC/B,UAAU;EACV,0BAAkB;UAAlB,kBAAkB;EAClB,yBAAyB;EACzB,yCAAyC;EACzC,UAAU;EACV,4BAA4B;EAC5B,QAAQ;EACR,kCAAkC;CAAE;AAEtC;EACE,eAAe;EACf,mBAAmB;CAAE;AAEvB;EACE,YAAY;EACZ,0BAAkB;UAAlB,kBAAkB;CAAE;AAEtB;EACE,eAAe;EACf,uBAAuB;CAAE;AAE3B;EACE,SAAS;EACT,aAAa;CAAE;AAEjB;EACE,cAAc;EACd,eAAe;EACf,sBAAsB;EACtB,gBAAgB;CAAE;AAEpB;EACE,iBAAiB;CAAE;AAErB;EACE,mBAAmB;CAAE;AAEvB;EACE,mBAAmB;EACnB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,UAAU;EACV,iBAAiB;CAAE","file":"Card.vue","sourcesContent":["@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box; }\n\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch; }\n\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit; }\n\ninput, textarea {\n  /*输入框可选中文本*/\n  user-select: text; }\n\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle; }\n\nimg {\n  /*图片无边框*/\n  border: none; }\n\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer; }\n\nli {\n  list-style: none; }\n\ni {\n  font-style: normal; }\n\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  overflow: hidden; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 41 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n.pi-confirm {\n  position: fixed;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  /*垂直居中*/\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  /*水平居中*/\n  -webkit-box-pack: center;\n  -webkit-justify-content: center;\n          justify-content: center;\n  background: rgba(0, 0, 0, 0.3);\n  /*动画*/\n  -webkit-transition: all 0.3s ease;\n  transition: all 0.3s ease;\n  z-index: -1;\n  opacity: 0;\n  /*显示*/\n}\n.pi-confirm.visible {\n    z-index: 999;\n    opacity: 1;\n}\n.pi-confirm.visible .pi-box {\n      -webkit-transform: none;\n              transform: none;\n}\n.pi-confirm .pi-box {\n    background: rgba(255, 255, 255, 0.8);\n    text-align: center;\n    border-radius: 0.8em;\n    overflow: hidden;\n    /*动画*/\n    -webkit-transition: -webkit-transform 0.3s ease;\n    transition: -webkit-transform 0.3s ease;\n    transition: transform 0.3s ease;\n    transition: transform 0.3s ease, -webkit-transform 0.3s ease;\n    -webkit-transform: scale3d(1.2, 1.2, 1);\n            transform: scale3d(1.2, 1.2, 1);\n}\n.pi-confirm .pi-title {\n    line-height: 250%;\n    background: rgba(255, 255, 255, 0.3);\n    box-shadow: 0 0 20px rgba(0, 0, 0, 0.03);\n    font-size: 1.2em;\n}\n.pi-confirm .pi-msg {\n    padding: 1.5em 3em;\n    line-height: 120%;\n}\n.pi-confirm .pi-btn-wrap {\n    line-height: 280%;\n    box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);\n    color: #08f;\n    font-size: 1.15em;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    overflow: hidden;\n}\n.pi-confirm .pi-btn-wrap > a {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n      /*间隔线*/\n}\n.pi-confirm .pi-btn-wrap > a:active {\n        background: rgba(0, 0, 0, 0.04);\n}\n.pi-confirm .pi-btn-wrap > a:not(:first-of-type) {\n        box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);\n}\n.pi-confirm .pi-btn-ok {\n    font-weight: bold;\n}\n", "", {"version":3,"sources":["/./src/component/PiConfirm.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB;EACE,gBAAgB;EAChB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,UAAU;EACV,qBAAc;EAAd,sBAAc;EAAd,cAAc;EACd,QAAQ;EACR,0BAAoB;EAApB,4BAAoB;UAApB,oBAAoB;EACpB,QAAQ;EACR,yBAAwB;EAAxB,gCAAwB;UAAxB,wBAAwB;EACxB,+BAA+B;EAC/B,MAAM;EACN,kCAA0B;EAA1B,0BAA0B;EAC1B,YAAY;EACZ,WAAW;EACX,MAAM;CAAE;AACR;IACE,aAAa;IACb,WAAW;CAAE;AACb;MACE,wBAAgB;cAAhB,gBAAgB;CAAE;AACtB;IACE,qCAAqC;IACrC,mBAAmB;IACnB,qBAAqB;IACrB,iBAAiB;IACjB,MAAM;IACN,gDAAgC;IAAhC,wCAAgC;IAAhC,gCAAgC;IAAhC,6DAAgC;IAChC,wCAAgC;YAAhC,gCAAgC;CAAE;AACpC;IACE,kBAAkB;IAClB,qCAAqC;IACrC,yCAAyC;IACzC,iBAAiB;CAAE;AACrB;IACE,mBAAmB;IACnB,kBAAkB;CAAE;AACtB;IACE,kBAAkB;IAClB,uCAAuC;IACvC,YAAY;IACZ,kBAAkB;IAClB,qBAAc;IAAd,sBAAc;IAAd,cAAc;IACd,iBAAiB;CAAE;AACnB;MACE,oBAAQ;MAAR,gBAAQ;cAAR,QAAQ;MACR,OAAO;CAAE;AACT;QACE,gCAAgC;CAAE;AACpC;QACE,uCAAuC;CAAE;AAC/C;IACE,kBAAkB;CAAE","file":"PiConfirm.vue","sourcesContent":["@charset \"UTF-8\";\n.pi-confirm {\n  position: fixed;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  display: flex;\n  /*垂直居中*/\n  align-items: center;\n  /*水平居中*/\n  justify-content: center;\n  background: rgba(0, 0, 0, 0.3);\n  /*动画*/\n  transition: all 0.3s ease;\n  z-index: -1;\n  opacity: 0;\n  /*显示*/ }\n  .pi-confirm.visible {\n    z-index: 999;\n    opacity: 1; }\n    .pi-confirm.visible .pi-box {\n      transform: none; }\n  .pi-confirm .pi-box {\n    background: rgba(255, 255, 255, 0.8);\n    text-align: center;\n    border-radius: 0.8em;\n    overflow: hidden;\n    /*动画*/\n    transition: transform 0.3s ease;\n    transform: scale3d(1.2, 1.2, 1); }\n  .pi-confirm .pi-title {\n    line-height: 250%;\n    background: rgba(255, 255, 255, 0.3);\n    box-shadow: 0 0 20px rgba(0, 0, 0, 0.03);\n    font-size: 1.2em; }\n  .pi-confirm .pi-msg {\n    padding: 1.5em 3em;\n    line-height: 120%; }\n  .pi-confirm .pi-btn-wrap {\n    line-height: 280%;\n    box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);\n    color: #08f;\n    font-size: 1.15em;\n    display: flex;\n    overflow: hidden; }\n    .pi-confirm .pi-btn-wrap > a {\n      flex: 1;\n      /*间隔线*/ }\n      .pi-confirm .pi-btn-wrap > a:active {\n        background: rgba(0, 0, 0, 0.04); }\n      .pi-confirm .pi-btn-wrap > a:not(:first-of-type) {\n        box-shadow: 0 0 1px rgba(0, 0, 0, 0.2); }\n  .pi-confirm .pi-btn-ok {\n    font-weight: bold; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 42 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n.pi-alert {\n  position: fixed;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  display: -webkit-box;\n  display: -webkit-flex;\n  display: flex;\n  /*垂直居中*/\n  -webkit-box-align: center;\n  -webkit-align-items: center;\n          align-items: center;\n  /*水平居中*/\n  -webkit-box-pack: center;\n  -webkit-justify-content: center;\n          justify-content: center;\n  background: rgba(0, 0, 0, 0.3);\n  /*动画*/\n  -webkit-transition: all 0.3s ease;\n  transition: all 0.3s ease;\n  z-index: -1;\n  opacity: 0;\n  /*显示*/\n}\n.pi-alert.visible {\n    z-index: 999;\n    opacity: 1;\n}\n.pi-alert.visible .pi-box {\n      -webkit-transform: none;\n              transform: none;\n}\n.pi-alert .pi-box {\n    background: rgba(255, 255, 255, 0.8);\n    text-align: center;\n    border-radius: 0.8em;\n    overflow: hidden;\n    /*动画*/\n    -webkit-transition: -webkit-transform 0.3s ease;\n    transition: -webkit-transform 0.3s ease;\n    transition: transform 0.3s ease;\n    transition: transform 0.3s ease, -webkit-transform 0.3s ease;\n    -webkit-transform: scale3d(1.2, 1.2, 1);\n            transform: scale3d(1.2, 1.2, 1);\n}\n.pi-alert .pi-title {\n    line-height: 250%;\n    background: rgba(255, 255, 255, 0.3);\n    box-shadow: 0 0 20px rgba(0, 0, 0, 0.03);\n    font-size: 1.2em;\n}\n.pi-alert .pi-msg {\n    padding: 1.5em 3em;\n    line-height: 120%;\n}\n.pi-alert .pi-btn-wrap {\n    line-height: 280%;\n    box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);\n    color: #08f;\n    font-size: 1.15em;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n}\n.pi-alert .pi-btn-wrap > a {\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n}\n.pi-alert .pi-btn-wrap > a:active {\n        background: rgba(0, 0, 0, 0.04);\n}\n", "", {"version":3,"sources":["/./src/component/PiAlert.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB;EACE,gBAAgB;EAChB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,UAAU;EACV,qBAAc;EAAd,sBAAc;EAAd,cAAc;EACd,QAAQ;EACR,0BAAoB;EAApB,4BAAoB;UAApB,oBAAoB;EACpB,QAAQ;EACR,yBAAwB;EAAxB,gCAAwB;UAAxB,wBAAwB;EACxB,+BAA+B;EAC/B,MAAM;EACN,kCAA0B;EAA1B,0BAA0B;EAC1B,YAAY;EACZ,WAAW;EACX,MAAM;CAAE;AACR;IACE,aAAa;IACb,WAAW;CAAE;AACb;MACE,wBAAgB;cAAhB,gBAAgB;CAAE;AACtB;IACE,qCAAqC;IACrC,mBAAmB;IACnB,qBAAqB;IACrB,iBAAiB;IACjB,MAAM;IACN,gDAAgC;IAAhC,wCAAgC;IAAhC,gCAAgC;IAAhC,6DAAgC;IAChC,wCAAgC;YAAhC,gCAAgC;CAAE;AACpC;IACE,kBAAkB;IAClB,qCAAqC;IACrC,yCAAyC;IACzC,iBAAiB;CAAE;AACrB;IACE,mBAAmB;IACnB,kBAAkB;CAAE;AACtB;IACE,kBAAkB;IAClB,uCAAuC;IACvC,YAAY;IACZ,kBAAkB;IAClB,qBAAc;IAAd,sBAAc;IAAd,cAAc;CAAE;AAChB;MACE,oBAAQ;MAAR,gBAAQ;cAAR,QAAQ;CAAE;AACV;QACE,gCAAgC;CAAE","file":"PiAlert.vue","sourcesContent":["@charset \"UTF-8\";\n.pi-alert {\n  position: fixed;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n  display: flex;\n  /*垂直居中*/\n  align-items: center;\n  /*水平居中*/\n  justify-content: center;\n  background: rgba(0, 0, 0, 0.3);\n  /*动画*/\n  transition: all 0.3s ease;\n  z-index: -1;\n  opacity: 0;\n  /*显示*/ }\n  .pi-alert.visible {\n    z-index: 999;\n    opacity: 1; }\n    .pi-alert.visible .pi-box {\n      transform: none; }\n  .pi-alert .pi-box {\n    background: rgba(255, 255, 255, 0.8);\n    text-align: center;\n    border-radius: 0.8em;\n    overflow: hidden;\n    /*动画*/\n    transition: transform 0.3s ease;\n    transform: scale3d(1.2, 1.2, 1); }\n  .pi-alert .pi-title {\n    line-height: 250%;\n    background: rgba(255, 255, 255, 0.3);\n    box-shadow: 0 0 20px rgba(0, 0, 0, 0.03);\n    font-size: 1.2em; }\n  .pi-alert .pi-msg {\n    padding: 1.5em 3em;\n    line-height: 120%; }\n  .pi-alert .pi-btn-wrap {\n    line-height: 280%;\n    box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);\n    color: #08f;\n    font-size: 1.15em;\n    display: flex; }\n    .pi-alert .pi-btn-wrap > a {\n      flex: 1; }\n      .pi-alert .pi-btn-wrap > a:active {\n        background: rgba(0, 0, 0, 0.04); }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 43 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  -webkit-user-select: none;\n          user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch;\n}\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit;\n}\ninput, textarea {\n  /*输入框可选中文本*/\n  -webkit-user-select: text;\n          user-select: text;\n}\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle;\n}\nimg {\n  /*图片无边框*/\n  border: none;\n}\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n}\nli {\n  list-style: none;\n}\ni {\n  font-style: normal;\n}\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0;\n}\n.wrapper .img {\n    background: center center no-repeat;\n    background-size: contain;\n}\n", "", {"version":3,"sources":["/./src/view/Slider.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,kBAAkB;AAClB;EACE,UAAU;EACV,WAAW;EACX,uBAAuB;CAAE;AAE3B;EACE,mBAAmB;EACnB,OAAO;EACP,YAAY;EACZ,gBAAgB;EAChB,mCAAmC;EACnC,+BAA+B;EAC/B,UAAU;EACV,0BAAkB;UAAlB,kBAAkB;EAClB,yBAAyB;EACzB,yCAAyC;EACzC,UAAU;EACV,4BAA4B;EAC5B,QAAQ;EACR,kCAAkC;CAAE;AAEtC;EACE,eAAe;EACf,mBAAmB;CAAE;AAEvB;EACE,YAAY;EACZ,0BAAkB;UAAlB,kBAAkB;CAAE;AAEtB;EACE,eAAe;EACf,uBAAuB;CAAE;AAE3B;EACE,SAAS;EACT,aAAa;CAAE;AAEjB;EACE,cAAc;EACd,eAAe;EACf,sBAAsB;EACtB,gBAAgB;CAAE;AAEpB;EACE,iBAAiB;CAAE;AAErB;EACE,mBAAmB;CAAE;AAEvB;EACE,mBAAmB;EACnB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,UAAU;CAAE;AACZ;IACE,oCAAoC;IACpC,yBAAyB;CAAE","file":"Slider.vue","sourcesContent":["@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box; }\n\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch; }\n\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit; }\n\ninput, textarea {\n  /*输入框可选中文本*/\n  user-select: text; }\n\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle; }\n\nimg {\n  /*图片无边框*/\n  border: none; }\n\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer; }\n\nli {\n  list-style: none; }\n\ni {\n  font-style: normal; }\n\n.wrapper {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 0; }\n  .wrapper .img {\n    background: center center no-repeat;\n    background-size: contain; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 44 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n.pi-tooltip {\n  position: fixed;\n  top: 80%;\n  left: 50%;\n  box-sizing: border-box;\n  background: rgba(0, 0, 0, 0.5);\n  color: #fff;\n  line-height: 120%;\n  padding: 0.6em 1em;\n  text-align: center;\n  border-radius: 0.5em;\n  /*动画*/\n  -webkit-transition: all 0.3s ease;\n  transition: all 0.3s ease;\n  z-index: -1;\n  opacity: 0;\n  /*显示*/\n}\n.pi-tooltip.visible {\n    z-index: 999;\n    opacity: 1;\n}\n", "", {"version":3,"sources":["/./src/component/PiTooltip.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB;EACE,gBAAgB;EAChB,SAAS;EACT,UAAU;EACV,uBAAuB;EACvB,+BAA+B;EAC/B,YAAY;EACZ,kBAAkB;EAClB,mBAAmB;EACnB,mBAAmB;EACnB,qBAAqB;EACrB,MAAM;EACN,kCAA0B;EAA1B,0BAA0B;EAC1B,YAAY;EACZ,WAAW;EACX,MAAM;CAAE;AACR;IACE,aAAa;IACb,WAAW;CAAE","file":"PiTooltip.vue","sourcesContent":["@charset \"UTF-8\";\n.pi-tooltip {\n  position: fixed;\n  top: 80%;\n  left: 50%;\n  box-sizing: border-box;\n  background: rgba(0, 0, 0, 0.5);\n  color: #fff;\n  line-height: 120%;\n  padding: 0.6em 1em;\n  text-align: center;\n  border-radius: 0.5em;\n  /*动画*/\n  transition: all 0.3s ease;\n  z-index: -1;\n  opacity: 0;\n  /*显示*/ }\n  .pi-tooltip.visible {\n    z-index: 999;\n    opacity: 1; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n/*loading样式*/\n.loading:before, .pi-slider.pi-loading .pi-wrap > :before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  margin-left: -20px;\n  margin-top: -20px;\n  border-radius: 40px;\n  /*如.loading元素中还有transform,:before内容将挡不住*/\n  z-index: -1;\n  /*圆环用border生成*/\n  border: 3px solid rgba(136, 136, 136, 0.2);\n  border-left: 3px solid #888888;\n  /*动画*/\n  -webkit-animation: ani_circle 0.8s linear infinite;\n          animation: ani_circle 0.8s linear infinite;\n}\n\n/*旋转动画*/\n@-webkit-keyframes ani_circle {\n0% {\n    -webkit-transform: rotateZ(0deg);\n            transform: rotateZ(0deg);\n}\n100% {\n    -webkit-transform: rotateZ(360deg);\n            transform: rotateZ(360deg);\n}\n}\n@keyframes ani_circle {\n0% {\n    -webkit-transform: rotateZ(0deg);\n            transform: rotateZ(0deg);\n}\n100% {\n    -webkit-transform: rotateZ(360deg);\n            transform: rotateZ(360deg);\n}\n}\n.pi-slider {\n  overflow: hidden;\n  position: relative;\n  /*优化滚动效果*/\n  -webkit-backface-visibility: hidden;\n          backface-visibility: hidden;\n  /*没有动画*/\n  /*loading*/\n  /*水平方向*/\n}\n.pi-slider.notrans .pi-wrap {\n    -webkit-transition: none;\n    transition: none;\n}\n.pi-slider.horizontal .pi-wrap {\n    height: 100%;\n    -webkit-box-orient: horizontal;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: row;\n            flex-direction: row;\n}\n.pi-slider.horizontal .pi-wrap > * {\n      height: 100%;\n}\n.pi-slider .pi-wrap {\n    width: 100%;\n    -webkit-transition: -webkit-transform ease;\n    transition: -webkit-transform ease;\n    transition: transform ease;\n    transition: transform ease, -webkit-transform ease;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-orient: vertical;\n    -webkit-box-direction: normal;\n    -webkit-flex-direction: column;\n            flex-direction: column;\n}\n.pi-slider .pi-wrap > * {\n      display: block;\n      -webkit-box-flex: 1;\n      -webkit-flex: 1;\n              flex: 1;\n      overflow: hidden;\n      position: relative;\n}\n.pi-slider .pi-pager {\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    text-align: center;\n    font-size: 0;\n    line-height: 20px;\n}\n.pi-slider .pi-pager > span {\n      border: 3px solid #bbb;\n      border-radius: 50%;\n      margin: 0 2px;\n}\n.pi-slider .pi-pager > span.selected {\n        border-color: #555;\n}\n", "", {"version":3,"sources":["/./src/component/PiSlider.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,aAAa;AACb;EACE,YAAY;EACZ,mBAAmB;EACnB,UAAU;EACV,SAAS;EACT,YAAY;EACZ,aAAa;EACb,mBAAmB;EACnB,kBAAkB;EAClB,oBAAoB;EACpB,yCAAyC;EACzC,YAAY;EACZ,eAAe;EACf,2CAA2C;EAC3C,+BAA+B;EAC/B,MAAM;EACN,mDAA2C;UAA3C,2CAA2C;CAAE;;AAE/C,QAAQ;AACR;AACE;IACE,iCAAyB;YAAzB,yBAAyB;CAAE;AAC7B;IACE,mCAA2B;YAA3B,2BAA2B;CAAE;CAAE;AAJnC;AACE;IACE,iCAAyB;YAAzB,yBAAyB;CAAE;AAC7B;IACE,mCAA2B;YAA3B,2BAA2B;CAAE;CAAE;AAEnC;EACE,iBAAiB;EACjB,mBAAmB;EACnB,UAAU;EACV,oCAA4B;UAA5B,4BAA4B;EAC5B,QAAQ;EACR,WAAW;EACX,QAAQ;CAAE;AACV;IACE,yBAAiB;IAAjB,iBAAiB;CAAE;AACrB;IACE,aAAa;IACb,+BAAoB;IAApB,8BAAoB;IAApB,4BAAoB;YAApB,oBAAoB;CAAE;AACtB;MACE,aAAa;CAAE;AACnB;IACE,YAAY;IACZ,2CAA2B;IAA3B,mCAA2B;IAA3B,2BAA2B;IAA3B,mDAA2B;IAC3B,qBAAc;IAAd,sBAAc;IAAd,cAAc;IACd,6BAAuB;IAAvB,8BAAuB;IAAvB,+BAAuB;YAAvB,uBAAuB;CAAE;AACzB;MACE,eAAe;MACf,oBAAQ;MAAR,gBAAQ;cAAR,QAAQ;MACR,iBAAiB;MACjB,mBAAmB;CAAE;AACzB;IACE,mBAAmB;IACnB,QAAQ;IACR,SAAS;IACT,UAAU;IACV,mBAAmB;IACnB,aAAa;IACb,kBAAkB;CAAE;AACpB;MACE,uBAAuB;MACvB,mBAAmB;MACnB,cAAc;CAAE;AAChB;QACE,mBAAmB;CAAE","file":"PiSlider.vue","sourcesContent":["@charset \"UTF-8\";\n/*loading样式*/\n.loading:before, .pi-slider.pi-loading .pi-wrap > :before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  margin-left: -20px;\n  margin-top: -20px;\n  border-radius: 40px;\n  /*如.loading元素中还有transform,:before内容将挡不住*/\n  z-index: -1;\n  /*圆环用border生成*/\n  border: 3px solid rgba(136, 136, 136, 0.2);\n  border-left: 3px solid #888888;\n  /*动画*/\n  animation: ani_circle 0.8s linear infinite; }\n\n/*旋转动画*/\n@keyframes ani_circle {\n  0% {\n    transform: rotateZ(0deg); }\n  100% {\n    transform: rotateZ(360deg); } }\n\n.pi-slider {\n  overflow: hidden;\n  position: relative;\n  /*优化滚动效果*/\n  backface-visibility: hidden;\n  /*没有动画*/\n  /*loading*/\n  /*水平方向*/ }\n  .pi-slider.notrans .pi-wrap {\n    transition: none; }\n  .pi-slider.horizontal .pi-wrap {\n    height: 100%;\n    flex-direction: row; }\n    .pi-slider.horizontal .pi-wrap > * {\n      height: 100%; }\n  .pi-slider .pi-wrap {\n    width: 100%;\n    transition: transform ease;\n    display: flex;\n    flex-direction: column; }\n    .pi-slider .pi-wrap > * {\n      display: block;\n      flex: 1;\n      overflow: hidden;\n      position: relative; }\n  .pi-slider .pi-pager {\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    text-align: center;\n    font-size: 0;\n    line-height: 20px; }\n    .pi-slider .pi-pager > span {\n      border: 3px solid #bbb;\n      border-radius: 50%;\n      margin: 0 2px; }\n      .pi-slider .pi-pager > span.selected {\n        border-color: #555; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 46 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(13)();
-// imports
-
-
-// module
-exports.push([module.i, "\n@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  -webkit-user-select: none;\n          user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch;\n}\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit;\n}\ninput, textarea {\n  /*输入框可选中文本*/\n  -webkit-user-select: text;\n          user-select: text;\n}\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle;\n}\nimg {\n  /*图片无边框*/\n  border: none;\n}\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n}\nli {\n  list-style: none;\n}\ni {\n  font-style: normal;\n}\n\n/*缩略图高度*/\n/*焦点图*/\n.carouselWrap {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 42px;\n}\n.carouselWrap .pi-carousel.pi-loading .pi-item:before {\n    top: 100px;\n}\n.imgWrap {\n  width: 100%;\n  height: 100%;\n  overflow: auto;\n  font-size: 15px;\n  color: #999;\n  line-height: 150%;\n  background-image: -webkit-linear-gradient(top, rgba(0, 0, 0, 0.05) 61%, #fff 0%);\n  background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 61%, #fff 0%);\n  /*页码指示*/\n  /*标题*/\n  /*来源和日期*/\n  /*描述信息*/\n}\n.imgWrap .img {\n    display: block;\n    max-width: 100%;\n    max-height: 60%;\n    min-height: 200px;\n    margin: 0 auto;\n}\n.imgWrap .imgInfo {\n    padding: 15px;\n    background: #fff;\n    min-height: 40%;\n}\n.imgWrap .indicator {\n    font-weight: 100;\n}\n.imgWrap .indicator span {\n      font-size: 30px;\n      color: #333;\n}\n.imgWrap .title {\n    font-size: 20px;\n    padding: 15px 0;\n    color: #333;\n}\n.imgWrap .subTitle {\n    color: #bbb;\n    font-size: 14px;\n    line-height: 100%;\n}\n.imgWrap .subTitle > span {\n      display: inline-block;\n}\n.imgWrap .subTitle > span:not(:first-of-type) {\n        border-left: 1px solid #bbb;\n        margin-left: 12px;\n        padding: 0 12px;\n}\n.imgWrap .desc {\n    padding-top: 15px;\n    text-indent: 2em;\n}\n\n/*缩略图*/\n.thumbWrap {\n  position: absolute;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  height: 42px;\n  white-space: nowrap;\n  overflow-y: hidden;\n  overflow-x: auto;\n}\n.thumb {\n  width: 60px;\n  height: 100%;\n  background: center center;\n  background-size: cover;\n  display: inline-block;\n}\n.thumb:not(:last-of-type) {\n    border-left: 1px solid #fff;\n}\n.thumb.selected {\n    border: 2px solid #06f;\n}\n.thumb.selected + .thumb {\n      border: none;\n}\n", "", {"version":3,"sources":["/./src/view/UcGallery.vue"],"names":[],"mappings":";AAAA,iBAAiB;AACjB,kBAAkB;AAClB;EACE,UAAU;EACV,WAAW;EACX,uBAAuB;CAAE;AAE3B;EACE,mBAAmB;EACnB,OAAO;EACP,YAAY;EACZ,gBAAgB;EAChB,mCAAmC;EACnC,+BAA+B;EAC/B,UAAU;EACV,0BAAkB;UAAlB,kBAAkB;EAClB,yBAAyB;EACzB,yCAAyC;EACzC,UAAU;EACV,4BAA4B;EAC5B,QAAQ;EACR,kCAAkC;CAAE;AAEtC;EACE,eAAe;EACf,mBAAmB;CAAE;AAEvB;EACE,YAAY;EACZ,0BAAkB;UAAlB,kBAAkB;CAAE;AAEtB;EACE,eAAe;EACf,uBAAuB;CAAE;AAE3B;EACE,SAAS;EACT,aAAa;CAAE;AAEjB;EACE,cAAc;EACd,eAAe;EACf,sBAAsB;EACtB,gBAAgB;CAAE;AAEpB;EACE,iBAAiB;CAAE;AAErB;EACE,mBAAmB;CAAE;;AAEvB,SAAS;AACT,OAAO;AACP;EACE,mBAAmB;EACnB,QAAQ;EACR,SAAS;EACT,OAAO;EACP,aAAa;CAAE;AACf;IACE,WAAW;CAAE;AAEjB;EACE,YAAY;EACZ,aAAa;EACb,eAAe;EACf,gBAAgB;EAChB,YAAY;EACZ,kBAAkB;EAClB,iFAA+E;EAA/E,+EAA+E;EAC/E,QAAQ;EACR,MAAM;EACN,SAAS;EACT,QAAQ;CAAE;AACV;IACE,eAAe;IACf,gBAAgB;IAChB,gBAAgB;IAChB,kBAAkB;IAClB,eAAe;CAAE;AACnB;IACE,cAAc;IACd,iBAAiB;IACjB,gBAAgB;CAAE;AACpB;IACE,iBAAiB;CAAE;AACnB;MACE,gBAAgB;MAChB,YAAY;CAAE;AAClB;IACE,gBAAgB;IAChB,gBAAgB;IAChB,YAAY;CAAE;AAChB;IACE,YAAY;IACZ,gBAAgB;IAChB,kBAAkB;CAAE;AACpB;MACE,sBAAsB;CAAE;AACxB;QACE,4BAA4B;QAC5B,kBAAkB;QAClB,gBAAgB;CAAE;AACxB;IACE,kBAAkB;IAClB,iBAAiB;CAAE;;AAEvB,OAAO;AACP;EACE,mBAAmB;EACnB,QAAQ;EACR,SAAS;EACT,UAAU;EACV,aAAa;EACb,oBAAoB;EACpB,mBAAmB;EACnB,iBAAiB;CAAE;AAErB;EACE,YAAY;EACZ,aAAa;EACb,0BAA0B;EAC1B,uBAAuB;EACvB,sBAAsB;CAAE;AACxB;IACE,4BAA4B;CAAE;AAChC;IACE,uBAAuB;CAAE;AACzB;MACE,aAAa;CAAE","file":"UcGallery.vue","sourcesContent":["@charset \"UTF-8\";\n/*基础样式,作用类似reset*/\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box; }\n\nbody {\n  overflow-x: hidden;\n  /*可继承*/\n  color: #333;\n  font-size: 14px;\n  font-family: helvetica, sans-serif;\n  -webkit-text-size-adjust: none;\n  /*禁止选中文本*/\n  user-select: none;\n  /*部分浏览器点选时会有淡蓝色框,这样可以去掉*/\n  -webkit-tap-highlight-color: transparent;\n  /*禁止保存图片*/\n  -webkit-touch-callout: none;\n  /*滚动平滑*/\n  -webkit-overflow-scrolling: touch; }\n\ninput, textarea, select {\n  /*表单元素字体大小可继承*/\n  font-size: inherit; }\n\ninput, textarea {\n  /*输入框可选中文本*/\n  user-select: text; }\n\nimg, input {\n  /*图片和输入元素垂直居中*/\n  vertical-align: middle; }\n\nimg {\n  /*图片无边框*/\n  border: none; }\n\na {\n  outline: none;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer; }\n\nli {\n  list-style: none; }\n\ni {\n  font-style: normal; }\n\n/*缩略图高度*/\n/*焦点图*/\n.carouselWrap {\n  position: absolute;\n  left: 0;\n  right: 0;\n  top: 0;\n  bottom: 42px; }\n  .carouselWrap .pi-carousel.pi-loading .pi-item:before {\n    top: 100px; }\n\n.imgWrap {\n  width: 100%;\n  height: 100%;\n  overflow: auto;\n  font-size: 15px;\n  color: #999;\n  line-height: 150%;\n  background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 61%, #fff 0%);\n  /*页码指示*/\n  /*标题*/\n  /*来源和日期*/\n  /*描述信息*/ }\n  .imgWrap .img {\n    display: block;\n    max-width: 100%;\n    max-height: 60%;\n    min-height: 200px;\n    margin: 0 auto; }\n  .imgWrap .imgInfo {\n    padding: 15px;\n    background: #fff;\n    min-height: 40%; }\n  .imgWrap .indicator {\n    font-weight: 100; }\n    .imgWrap .indicator span {\n      font-size: 30px;\n      color: #333; }\n  .imgWrap .title {\n    font-size: 20px;\n    padding: 15px 0;\n    color: #333; }\n  .imgWrap .subTitle {\n    color: #bbb;\n    font-size: 14px;\n    line-height: 100%; }\n    .imgWrap .subTitle > span {\n      display: inline-block; }\n      .imgWrap .subTitle > span:not(:first-of-type) {\n        border-left: 1px solid #bbb;\n        margin-left: 12px;\n        padding: 0 12px; }\n  .imgWrap .desc {\n    padding-top: 15px;\n    text-indent: 2em; }\n\n/*缩略图*/\n.thumbWrap {\n  position: absolute;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  height: 42px;\n  white-space: nowrap;\n  overflow-y: hidden;\n  overflow-x: auto; }\n\n.thumb {\n  width: 60px;\n  height: 100%;\n  background: center center;\n  background-size: cover;\n  display: inline-block; }\n  .thumb:not(:last-of-type) {\n    border-left: 1px solid #fff; }\n  .thumb.selected {\n    border: 2px solid #06f; }\n    .thumb.selected + .thumb {\n      border: none; }\n"],"sourceRoot":"webpack://"}]);
-
-// exports
-
-
-/***/ }),
-/* 47 */
-/***/ (function(module, exports, __webpack_require__) {
-
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(74)
+  __webpack_require__(30)
 }
-var Component = __webpack_require__(17)(
+var Component = __webpack_require__(2)(
   /* script */
-  __webpack_require__(24),
+  __webpack_require__(12),
   /* template */
-  __webpack_require__(63),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/component/PiAlert.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] PiAlert.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-54510592", Component.options)
-  } else {
-    hotAPI.reload("data-v-54510592", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 48 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(68)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(25),
-  /* template */
-  __webpack_require__(57),
+  __webpack_require__(27),
   /* styles */
   injectStyle,
   /* scopeId */
@@ -18065,151 +16504,19 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 49 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(73)
+  __webpack_require__(32)
 }
-var Component = __webpack_require__(17)(
+var Component = __webpack_require__(2)(
   /* script */
-  __webpack_require__(27),
+  __webpack_require__(14),
   /* template */
-  __webpack_require__(62),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/component/PiConfirm.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] PiConfirm.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-49f2c3db", Component.options)
-  } else {
-    hotAPI.reload("data-v-49f2c3db", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 50 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(77)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(28),
-  /* template */
-  __webpack_require__(66),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/component/PiSlider.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] PiSlider.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-919727d4", Component.options)
-  } else {
-    hotAPI.reload("data-v-919727d4", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 51 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(76)
-}
-var Component = __webpack_require__(17)(
-  /* script */
   __webpack_require__(29),
-  /* template */
-  __webpack_require__(65),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/component/PiTooltip.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] PiTooltip.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-6761539e", Component.options)
-  } else {
-    hotAPI.reload("data-v-6761539e", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 52 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(72)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(30),
-  /* template */
-  __webpack_require__(61),
   /* styles */
   injectStyle,
   /* scopeId */
@@ -18241,183 +16548,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 53 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(70)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(31),
-  /* template */
-  __webpack_require__(59),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/view/Carousel.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] Carousel.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-2f4c5ca0", Component.options)
-  } else {
-    hotAPI.reload("data-v-2f4c5ca0", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 54 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(69)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(32),
-  /* template */
-  __webpack_require__(58),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/view/Msgbox.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] Msgbox.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-091e380c", Component.options)
-  } else {
-    hotAPI.reload("data-v-091e380c", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 55 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(75)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(33),
-  /* template */
-  __webpack_require__(64),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/view/Slider.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] Slider.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-6117629e", Component.options)
-  } else {
-    hotAPI.reload("data-v-6117629e", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 56 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(78)
-}
-var Component = __webpack_require__(17)(
-  /* script */
-  __webpack_require__(34),
-  /* template */
-  __webpack_require__(67),
-  /* styles */
-  injectStyle,
-  /* scopeId */
-  null,
-  /* moduleIdentifier (server only) */
-  null
-)
-Component.options.__file = "/Users/soneway/Sites/test/vuex/src/view/UcGallery.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {return key !== "default" && key !== "__esModule"})) {console.error("named exports are not supported in *.vue files.")}
-if (Component.options.functional) {console.error("[vue-loader] UcGallery.vue: functional components are not supported with templates, they should use render functions.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-cc8de278", Component.options)
-  } else {
-    hotAPI.reload("data-v-cc8de278", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 57 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
@@ -18448,73 +16579,7 @@ if (false) {
 }
 
 /***/ }),
-/* 58 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "wrapper"
-  }, [_c('a', {
-    on: {
-      "click": _vm.__alertClick
-    }
-  }, [_vm._v("alert")]), _vm._v(" "), _c('a', {
-    on: {
-      "click": _vm.__confirmClick
-    }
-  }, [_vm._v("confirm")]), _vm._v(" "), _c('a', {
-    on: {
-      "click": _vm.__tooltipClick
-    }
-  }, [_vm._v("tooltip")]), _vm._v(" "), _c('pi-alert', {
-    ref: "alert",
-    attrs: {
-      "isGlobal": true
-    }
-  }), _vm._v(" "), _c('pi-confirm', {
-    ref: "confirm",
-    attrs: {
-      "isGlobal": true
-    }
-  }), _vm._v(" "), _c('pi-tooltip', {
-    ref: "tooltip",
-    attrs: {
-      "isGlobal": true
-    }
-  })], 1)
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-091e380c", module.exports)
-  }
-}
-
-/***/ }),
-/* 59 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "wrapper"
-  }, [_c('pi-carousel', {
-    ref: "carousel",
-    attrs: {
-      "dataList": _vm.dataList
-    }
-  })], 1)
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-2f4c5ca0", module.exports)
-  }
-}
-
-/***/ }),
-/* 60 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
@@ -18589,7 +16654,7 @@ if (false) {
 }
 
 /***/ }),
-/* 61 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
@@ -18610,300 +16675,17 @@ if (false) {
 }
 
 /***/ }),
-/* 62 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "pi-confirm",
-    class: _vm._class
-  }, [_c('div', {
-    staticClass: "pi-box",
-    style: (_vm._boxStyle)
-  }, [_c('h3', {
-    staticClass: "pi-title",
-    domProps: {
-      "innerHTML": _vm._s(_vm.title)
-    }
-  }), _vm._v(" "), _c('p', {
-    staticClass: "pi-msg",
-    domProps: {
-      "innerHTML": _vm._s(_vm.msg)
-    }
-  }), _vm._v(" "), _c('div', {
-    staticClass: "pi-btn-wrap"
-  }, [_c('a', {
-    staticClass: "pi-btn-cancel",
-    on: {
-      "click": _vm.__btnCancelClick
-    }
-  }, [_vm._v(_vm._s(_vm.btnCancelText))]), _vm._v(" "), _c('a', {
-    staticClass: "pi-btn-ok",
-    on: {
-      "click": _vm.__btnOkClick
-    }
-  }, [_vm._v(_vm._s(_vm.btnOkText))])])])])
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-49f2c3db", module.exports)
-  }
-}
-
-/***/ }),
-/* 63 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "pi-alert",
-    class: _vm._class
-  }, [_c('div', {
-    staticClass: "pi-box",
-    style: (_vm._boxStyle)
-  }, [_c('h3', {
-    staticClass: "pi-title",
-    domProps: {
-      "innerHTML": _vm._s(_vm.title)
-    }
-  }), _vm._v(" "), _c('p', {
-    staticClass: "pi-msg",
-    domProps: {
-      "innerHTML": _vm._s(_vm.msg)
-    }
-  }), _vm._v(" "), _c('div', {
-    staticClass: "pi-btn-wrap"
-  }, [_c('a', {
-    staticClass: "pi-btn-ok",
-    on: {
-      "click": _vm.__btnOkClick
-    }
-  }, [_vm._v(_vm._s(_vm.btnOkText))])])])])
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-54510592", module.exports)
-  }
-}
-
-/***/ }),
-/* 64 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "wrapper"
-  }, [_c('pi-slider', {
-    ref: "slider",
-    attrs: {
-      "isHorizontal": true,
-      "autoPlayTimeout": 0,
-      "index": 0,
-      "isShowPager": true
-    },
-    scopedSlots: _vm._u([{
-      key: "pager",
-      fn: function(props) {
-        return _vm._l((props.self.items), function(_, index) {
-          return _c('span', {
-            class: {
-              selected: index === props.self.currentIndex
-            }
-          })
-        })
-      }
-    }])
-  }, [_c('div', {
-    staticClass: "img",
-    staticStyle: {
-      "background-image": "url(https://soneway.github.io/jq/example/dist/img/1.jpg)"
-    }
-  }), _vm._v(" "), _c('div', {
-    staticClass: "img",
-    staticStyle: {
-      "background-image": "url(https://soneway.github.io/jq/example/dist/img/2.jpg)"
-    }
-  }), _vm._v(" "), _c('div', {
-    staticClass: "img",
-    staticStyle: {
-      "background-image": "url(https://soneway.github.io/jq/example/dist/img/3.jpg)"
-    }
-  }), _vm._v(" "), _c('div', {
-    staticClass: "img",
-    staticStyle: {
-      "background-image": "url(https://soneway.github.io/jq/example/dist/img/4.jpg)"
-    }
-  }), _vm._v(" "), _c('div', {
-    staticClass: "img",
-    staticStyle: {
-      "background-image": "url(https://soneway.github.io/jq/example/dist/img/5.jpg)"
-    }
-  })])], 1)
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-6117629e", module.exports)
-  }
-}
-
-/***/ }),
-/* 65 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "pi-tooltip",
-    class: _vm._class,
-    style: (_vm._style),
-    domProps: {
-      "innerHTML": _vm._s(_vm.msg)
-    }
-  })
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-6761539e", module.exports)
-  }
-}
-
-/***/ }),
-/* 66 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "pi-slider",
-    class: _vm._class,
-    style: (_vm._style),
-    on: {
-      "touchstart": _vm.__touchstart,
-      "touchmove": _vm.__touchmove,
-      "touchend": _vm.__touchend
-    }
-  }, [_c('div', {
-    staticClass: "pi-wrap",
-    style: (_vm._wrapStyle),
-    on: {
-      "click": _vm.__wrapClick
-    }
-  }, [_vm._t("default", null, {
-    self: this
-  })], 2), _vm._v(" "), (_vm.isShowPager) ? _c('div', {
-    staticClass: "pi-pager"
-  }, [_vm._t("pager", _vm._l((_vm.items), function(_, index) {
-    return _c('span', {
-      class: {
-        selected: index === _vm.currentIndex
-      },
-      on: {
-        "click": function($event) {
-          _vm.__pagerClick(index)
-        }
-      }
-    })
-  }), {
-    self: this
-  })], 2) : _vm._e()])
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-919727d4", module.exports)
-  }
-}
-
-/***/ }),
-/* 67 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;
-  return _c('div', {
-    staticClass: "wrapper"
-  }, [_c('div', {
-    staticClass: "carouselWrap"
-  }, [_c('pi-carousel', {
-    ref: "carousel",
-    attrs: {
-      "isShowPager": false,
-      "isLoop": false,
-      "dataList": _vm.dataList
-    },
-    scopedSlots: _vm._u([{
-      key: "default",
-      fn: function(props) {
-        return [_c('div', {
-          staticClass: "imgWrap"
-        }, [_c('img', {
-          staticClass: "img",
-          attrs: {
-            "src": props.itemData.img
-          }
-        }), _vm._v(" "), _c('div', {
-          staticClass: "imgInfo"
-        }, [_c('p', {
-          staticClass: "indicator"
-        }, [_c('span', [_vm._v(_vm._s(props.index + 1))]), _vm._v("/" + _vm._s(_vm.dataList.length) + "\n                        ")]), _vm._v(" "), _c('p', {
-          staticClass: "title"
-        }, [_vm._v(_vm._s(_vm.titleInfo.title))]), _vm._v(" "), _c('p', {
-          staticClass: "subTitle"
-        }, [_c('span', {
-          staticClass: "source"
-        }, [_vm._v(_vm._s(_vm.titleInfo.source))]), _c('span', {
-          staticClass: "time"
-        }, [_vm._v(_vm._s(_vm.titleInfo.time))])]), _vm._v(" "), _c('p', {
-          staticClass: "desc"
-        }, [_vm._v(_vm._s(props.itemData.desc))])])])]
-      }
-    }])
-  })], 1), _vm._v(" "), _c('div', {
-    ref: "thumbWrap",
-    staticClass: "thumbWrap"
-  }, _vm._l((_vm.dataList), function(item, index) {
-    return _c('div', {
-      staticClass: "thumb",
-      class: {
-        selected: index === _vm.thumbIndex
-      },
-      style: ({
-        backgroundImage: ("url(" + (item.img) + ")")
-      }),
-      on: {
-        "click": function($event) {
-          _vm.__thumbClick(index)
-        }
-      }
-    })
-  }))])
-},staticRenderFns: []}
-module.exports.render._withStripped = true
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-     require("vue-hot-reload-api").rerender("data-v-cc8de278", module.exports)
-  }
-}
-
-/***/ }),
-/* 68 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(36);
+var content = __webpack_require__(20);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(20)("5a632a9a", content, false);
+var update = __webpack_require__(3)("71d5ff91", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -18919,69 +16701,17 @@ if(false) {
 }
 
 /***/ }),
-/* 69 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(37);
+var content = __webpack_require__(21);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(20)("b87bf9d4", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-091e380c\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./Msgbox.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-091e380c\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./Msgbox.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 70 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(38);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("e5a3b9ea", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-2f4c5ca0\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./Carousel.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-2f4c5ca0\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./Carousel.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 71 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(39);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("c9f9ff30", content, false);
+var update = __webpack_require__(3)("c0b3ec54", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -18997,17 +16727,17 @@ if(false) {
 }
 
 /***/ }),
-/* 72 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(40);
+var content = __webpack_require__(22);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(20)("e30b61ba", content, false);
+var update = __webpack_require__(3)("8b34d638", content, false, {});
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -19023,240 +16753,38 @@ if(false) {
 }
 
 /***/ }),
-/* 73 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(41);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("6a41bce3", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-49f2c3db\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiConfirm.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-49f2c3db\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiConfirm.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 74 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(42);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("2d46bfed", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-54510592\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiAlert.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-54510592\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiAlert.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 75 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(43);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("679b8ff3", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-6117629e\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./Slider.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-6117629e\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./Slider.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 76 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(44);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("1d9e1939", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-6761539e\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiTooltip.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-6761539e\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiTooltip.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 77 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(45);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("83dd6ec8", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-919727d4\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiSlider.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-919727d4\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./PiSlider.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 78 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(46);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(20)("4c3a5e2a", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-cc8de278\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./UcGallery.vue", function() {
-     var newContent = require("!!../../node_modules/css-loader/index.js?sourceMap!../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-cc8de278\",\"scoped\":false,\"hasInlineConfig\":true}!../../node_modules/sass-loader/lib/loader.js!../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./UcGallery.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 79 */,
-/* 80 */
+/* 33 */
 /***/ (function(module, exports) {
 
-module.exports = {
-	"dataList": [
-		{
-			"img": "http://m.k618.cn/uctp/201703/W020170309517271350068.jpg",
-			"desc": "美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://m.k618.cn/uctp/201703/W020170309517280709840.jpg",
-			"desc": "美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://m.k618.cn/uctp/201703/W020170309517297138416.jpg",
-			"desc": "美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://m.k618.cn/uctp/201703/W020170309517288414818.jpg",
-			"desc": "美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281829963355.jpg",
-			"desc": "美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281830257742.jpg",
-			"desc": "特朗普填写选票。美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281831576714.jpg",
-			"desc": "特朗普和妻子在纽约投票。"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281832198313.jpg",
-			"desc": "特朗普和妻子在纽约投票。美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281837479067.jpg",
-			"desc": "投票时特朗普看向妻子的选票美国时间11月8日上午，美国大选投票在纽约州如火如荼地进行，特朗普夫妇和克林顿夫妇分别在纽约曼哈顿和查帕克进行了投票。特朗普夫妇前往川普大楼附近的曼哈顿投票处投票，不过由于曼哈顿是民主党优势地区，特朗普夫妇并没有受到热烈欢迎，甚至被喝了倒彩。希拉里夫妇在查帕克投票处则受到了支持者欢迎，在投票后与支持者拥抱握手。图 英国每日邮报"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281837723654.jpg",
-			"desc": "巧合的是，特朗普的儿子艾瑞克投票时也看向妻子的选择，可谓子如其父。"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281838046113.jpg",
-			"desc": "小女儿贴好选举日贴纸后，特朗普携妻女合影。"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281838253245.jpg",
-			"desc": "纽约时间早上8点，希拉里与克林顿一起前往查帕克投票点投票。"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281838409257.jpg",
-			"desc": "投票后她与支持者拥抱和握手，得到支持者喝彩。"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281839310496.jpg",
-			"desc": "克林顿带着眼镜看选票，希拉里在他右侧弯腰填写选票。"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281880358681.jpg",
-			"desc": "希拉里弯腰填写选票。"
-		},
-		{
-			"img": "http://picture.youth.cn/qtdb/201611/W020161109281881050299.jpg",
-			"desc": "希拉里的女儿在投票日前夜参加希拉里拉票活动后回到纽约。"
-		}
-	],
-	"titleInfo": {
-		"title": "组图：黄埔滩头探访海军战舰云集的广州造船厂",
-		"source": "河南商报",
-		"time": "04-22 11:24"
-	}
-};
+/**
+ * Translates the list format produced by css-loader into something
+ * easier to manipulate.
+ */
+module.exports = function listToStyles (parentId, list) {
+  var styles = []
+  var newStyles = {}
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i]
+    var id = item[0]
+    var css = item[1]
+    var media = item[2]
+    var sourceMap = item[3]
+    var part = {
+      id: parentId + ':' + i,
+      css: css,
+      media: media,
+      sourceMap: sourceMap
+    }
+    if (!newStyles[id]) {
+      styles.push(newStyles[id] = { id: id, parts: [part] })
+    } else {
+      newStyles[id].parts.push(part)
+    }
+  }
+  return styles
+}
+
 
 /***/ })
-],[8]);
+],[15]);
 //# sourceMappingURL=index.js.map

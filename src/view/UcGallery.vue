@@ -164,7 +164,6 @@
       PiCarousel,
     },
     created() {
-
       // 将data中的数据覆盖
       Object.assign(this, data);
     },

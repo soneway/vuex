@@ -1,8 +1,8 @@
 import Card from '../view/Card.vue';
-import Carousel from '../view/Carousel.vue';
-import Msgbox from '../view/Msgbox.vue';
-import Slider from '../view/Slider.vue';
-import UcGallery from '../view/UcGallery.vue';
+const Carousel = () => System.import('../view/Carousel.vue');
+const Msgbox = () => System.import('../view/Msgbox.vue');
+const Slider = () => System.import('../view/Slider.vue');
+const UcGallery = () => System.import('../view/UcGallery.vue');
 
 export default [
   {
