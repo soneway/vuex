@@ -1,26 +1,19 @@
 <template>
-    <div class="wrapper">
-        <pi-card :dataList="dataList">
-        </pi-card>
+    <div class="view card">
+        <PiCard :dataList="dataList">
+        </PiCard>
     </div>
 </template>
 
 <style lang="scss">
-    @import "../style/common";
-
-    .wrapper {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        bottom: 0;
+    .card {
+        height: 100%;
         overflow: hidden;
     }
 </style>
 
 <script>
   import PiCard from '../component/PiCard.vue';
-  import request from '../script/request';
 
   export default {
     components: {

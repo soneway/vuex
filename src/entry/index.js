@@ -3,7 +3,8 @@ import '../script/common';
 
 import Vue from 'vue';
 import VueRouter from 'vue-router';
-import routes from '../router/router';
+import routes from '../router';
+import Index from '../Index.vue';
 
 Vue.use(VueRouter);
 
@@ -11,6 +12,9 @@ const router = new VueRouter({
   routes,
 });
 
+// eslint-disable-next-line no-new
 new Vue({
   router,
-}).$mount('#root');
+  el: '#root',
+  render: h => h(Index),
+});

@@ -1,24 +1,17 @@
 <template>
-    <div class="wrapper">
+    <div class="view msgbox">
         <a @click="__alertClick">alert</a>
         <a @click="__confirmClick">confirm</a>
         <a @click="__tooltipClick">tooltip</a>
 
-        <pi-alert ref="alert" :isGlobal="true"></pi-alert>
-        <pi-confirm ref="confirm" :isGlobal="true"></pi-confirm>
-        <pi-tooltip ref="tooltip" :isGlobal="true"></pi-tooltip>
+        <PiAlert ref="alert" :isGlobal="true" />
+        <PiConfirm ref="confirm" :isGlobal="true" />
+        <PiTooltip ref="tooltip" :isGlobal="true" />
     </div>
 </template>
 
 <style lang="scss">
-    @import "../style/common";
-
-    .wrapper {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        bottom: 0;
+    .msgbox {
         padding: 20px;
 
         & > a {
@@ -45,7 +38,7 @@
     components: {
       PiAlert,
       PiConfirm,
-      PiTooltip
+      PiTooltip,
     },
     mounted() {
 
@@ -57,7 +50,7 @@
           title: 'alert title',
           btnOkClick() {
             console.log('alert btnOkClick');
-          }
+          },
         });
       },
       __confirmClick() {
@@ -71,12 +64,12 @@
           btnCancelText: 'cancel',
           btnCancelClick() {
             console.log('confirm btnCancelClick');
-          }
+          },
         });
       },
       __tooltipClick() {
         this.$refs.tooltip.show(`哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈${Date.now()}`);
-      }
-    }
+      },
+    },
   };
 </script>

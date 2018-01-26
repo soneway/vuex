@@ -36,22 +36,22 @@
     props: {
       // 宽度
       width: {
-        default: '280px'
+        default: '280px',
       },
       // 显示时长
       timeout: {
-        default: 2000
+        default: 2000,
       },
       // 是否添加到全局变量
       isGlobal: {
-        default: false
-      }
+        default: false,
+      },
     },
     data() {
       return {
         msg: '',
         visible: false,
-        inter: null
+        inter: null,
       };
     },
     computed: {
@@ -59,14 +59,14 @@
         const { width } = this;
         return {
           width,
-          marginLeft: `${-parseInt(width, 10) / 2}px`
+          marginLeft: `${-parseInt(width, 10) / 2}px`,
         };
       },
       _class() {
         return {
-          visible: this.visible
+          visible: this.visible,
         };
-      }
+      },
     },
     created() {
       this.isGlobal && (window.tooltip = this.show);
@@ -81,7 +81,7 @@
         this.inter = setTimeout(() => {
           this.visible = false;
         }, timeout || this.timeout);
-      }
-    }
+      },
+    },
   };
 </script>

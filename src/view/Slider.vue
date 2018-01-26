@@ -1,6 +1,6 @@
 <template>
-    <div class="wrapper">
-        <pi-slider ref="slider"
+    <div class="view slider">
+        <PiSlider ref="slider"
             :isHorizontal="true"
             :autoPlayTimeout="0"
             :index="0"
@@ -15,19 +15,13 @@
                 <span v-for="(_,index) in props.self.items"
                     :class="{selected: index === props.self.currentIndex}"></span>
             </template>
-        </pi-slider>
+        </PiSlider>
     </div>
 </template>
 
 <style lang="scss">
-    @import "../style/common";
-
-    .wrapper {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        bottom: 0;
+    .slider {
+        height: 100%;
 
         .img {
             background: center center no-repeat;

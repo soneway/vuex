@@ -1,20 +1,14 @@
 <template>
-    <div class="wrapper">
-        <pi-carousel ref="carousel"
+    <div class="view carousel">
+        <PiCarousel ref="carousel"
             :dataList="dataList">
-        </pi-carousel>
+        </PiCarousel>
     </div>
 </template>
 
 <style lang="scss">
-    @import "../style/common";
-
-    .wrapper {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        bottom: 0;
+    .carousel {
+        height: 100%;
     }
 </style>
 

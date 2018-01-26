@@ -10,7 +10,7 @@
         <div class="pi-wrap"
             :style="_wrapStyle"
             @click="__wrapClick">
-            <slot :self="this"></slot>
+            <slot :self="this" />
         </div>
         <!--滚动容器 end-->
 
@@ -101,49 +101,49 @@
     props: {
       // 宽度
       width: {
-        default: '100%'
+        default: '100%',
       },
       // 高度
       height: {
-        default: '100%'
+        default: '100%',
       },
       // 是否水平方向滚动
       isHorizontal: {
-        default: false
+        default: false,
       },
       // 滑动距离阈值
       swipSpanThreshold: {
-        default: 6
+        default: 6,
       },
       // 滑动阈值
       swipThreshold: {
-        default: 50
+        default: 50,
       },
       // 动画时长
       duration: {
-        default: 400
+        default: 400,
       },
       // first和last拉不动的比率
       pullRatio: {
-        default: 2
+        default: 2,
       },
       // 默认滚动索引
       index: {
-        default: 0
+        default: 0,
       },
       // 是否显示页脚
       isShowPager: {
-        default: true
+        default: true,
       },
       // 是否显示loading
       isShowLoading: {
-        default: true
+        default: true,
       },
       // 自动播放间隔
       autoPlayTimeout: {
         // 默认为0,表示禁用自动播放
-        default: 0
-      }
+        default: 0,
+      },
     },
     data() {
       return {
@@ -154,7 +154,7 @@
         // 滚动索引
         currentIndex: this.index,
         // translate
-        currentTranslate: 0
+        currentTranslate: 0,
       };
     },
     computed: {
@@ -165,13 +165,13 @@
         return {
           notrans: this.notrans,
           'pi-loading': this.isShowLoading,
-          horizontal: this.isHorizontal
+          horizontal: this.isHorizontal,
         };
       },
       _style() {
         return {
           width: this.width,
-          height: this.height
+          height: this.height,
         };
       },
       _wrapStyle() {
@@ -205,7 +205,7 @@
         // 样式对象
         const style = {
           transform: `translate3d(${isHorizontal ? `${translate}px,0,0` : `0,${translate}px,0`})`,
-          transitionDuration: `${this.duration / 1000}s`
+          transitionDuration: `${this.duration / 1000}s`,
         };
 
         // 容器的高度或宽度
@@ -220,7 +220,7 @@
         }
 
         return style;
-      }
+      },
     },
     mounted() {
       // 初始化slots
@@ -359,7 +359,7 @@
       // 停止定定时器
       stopInter() {
         clearInterval(this.inter);
-      }
-    }
+      },
+    },
   };
 </script>

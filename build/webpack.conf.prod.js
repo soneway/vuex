@@ -15,21 +15,21 @@ const templatePlugins = templates.map((item) => new HtmlWebpackPlugin(Object.ass
     // 删除注释
     removeComments: true,
     // 换行和空格
-    collapseWhitespace: true
-  }
+    collapseWhitespace: true,
+  },
 })));
 
 module.exports = merge(baseConf, {
   output: {
     // 打包文件输出文件夹
     path: path.join(__dirname, '../prod'),
-    filename: '[name].[chunkhash].js'
+    filename: '[name].[chunkhash].js',
   },
   resolve: {
     // 别名配置
     alias: {
-      vue: 'vue/dist/vue.runtime.min.js'
-    }
+      vue: 'vue/dist/vue.runtime.min.js',
+    },
   },
   module: {
     loaders: [
@@ -43,8 +43,8 @@ module.exports = merge(baseConf, {
             query: {
               name: 'img/[name].[hash:20].[ext]',
               // 小于2k的图片base64 inline
-              limit: 2000
-            }
+              limit: 2000,
+            },
           },
           // 图片压缩
           {
@@ -55,17 +55,17 @@ module.exports = merge(baseConf, {
               interlaced: false,
               pngquant: {
                 quality: '65-90',
-                speed: 4
-              }
-            }
-          }
-        ]
-      }
-    ]
+                speed: 4,
+              },
+            },
+          },
+        ],
+      },
+    ],
   },
   plugins: [
     ...templatePlugins,
     // js压缩
-    new webpack.optimize.UglifyJsPlugin()
-  ]
+    new webpack.optimize.UglifyJsPlugin(),
+  ],
 });

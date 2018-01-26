@@ -55,8 +55,8 @@
 
   export default {
     components: {
-      PiCarousel
+      PiCarousel,
     },
-    props: Object.assign({}, PiCarousel.props)
+    props: Object.assign({}, PiCarousel.props),
   };
 </script>

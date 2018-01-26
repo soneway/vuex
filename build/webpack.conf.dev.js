@@ -12,10 +12,10 @@ module.exports = merge(baseConf, {
   output: {
     // 打包文件输出文件夹
     path: path.join(__dirname, '../dev'),
-    filename: '[name].js'
+    filename: '[name].js',
   },
   devServer: {
-    hot: true
+    hot: true,
   },
   module: {
     loaders: [
@@ -29,15 +29,15 @@ module.exports = merge(baseConf, {
             query: {
               name: 'img/[name].[ext]',
               // 禁止图片base64 inline
-              limit: Number.MAX_VALUE
-            }
-          }
-        ]
-      }
-    ]
+              limit: Number.MAX_VALUE,
+            },
+          },
+        ],
+      },
+    ],
   },
   devtool: 'source-map',
   plugins: [
-    ...templatePlugins
-  ]
+    ...templatePlugins,
+  ],
 });

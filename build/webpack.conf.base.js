@@ -29,14 +29,9 @@ const config = {
     ],
   },
   plugins: [],
-  resolve: {
-    alias: {
-      'vue': 'vue/dist/vue.js',
-    },
-  },
 };
 
-if (Object.keys(entry).length > 0) {
+if (Object.keys(entry).length > 1) {
   // 公共库
   config.plugins.push(new webpack.optimize.CommonsChunkPlugin({ names: ['vendor'] }));
 }

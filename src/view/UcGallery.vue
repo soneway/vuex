@@ -1,9 +1,9 @@
 <template>
-    <div class="wrapper">
+    <div class="view uc-gallery">
 
         <!--焦点图容器-->
         <div class="carouselWrap">
-            <pi-carousel ref="carousel"
+            <PiCarousel ref="carousel"
                 :isShowPager="false"
                 :isLoop="false"
                 :dataList="dataList">
@@ -22,7 +22,7 @@
                         </div>
                     </div>
                 </template>
-            </pi-carousel>
+            </PiCarousel>
         </div>
         <!--焦点图容器 end-->
 
@@ -39,117 +39,120 @@
 </template>
 
 <style lang="scss">
-    @import "../style/common";
-
-    /*缩略图高度*/
-    $thumbHeight: 42px;
-
-    /*焦点图*/
-    .carouselWrap {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        bottom: $thumbHeight;
-
-        // 复写loading的top位置
-        .pi-carousel.pi-loading .pi-item:before {
-            top: 100px;
-        }
-    }
-
-    .imgWrap {
-        $padding: 15px;
-        width: 100%;
+    .uc-gallery {
         height: 100%;
-        overflow: auto;
-        font-size: 15px;
-        color: #999;
-        line-height: 150%;
-        background-image: linear-gradient(to bottom, rgba(#000, 0.05) 61%, #fff 0%);
+        position: relative;
 
-        .img {
-            display: block;
-            max-width: 100%;
-            max-height: 60%;
-            min-height: 200px;
-            margin: 0 auto;
-        }
+        /*缩略图高度*/
+        $thumbHeight: 42px;
 
-        .imgInfo {
-            padding: $padding;
-            background: #fff;
-            min-height: 40%;
-        }
+        /*焦点图*/
+        .carouselWrap {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: $thumbHeight;
 
-        /*页码指示*/
-        .indicator {
-            font-weight: 100;
-
-            span {
-                font-size: 30px;
-                color: #333;
+            // 复写loading的top位置
+            .pi-carousel.pi-loading .pi-item:before {
+                top: 100px;
             }
         }
 
-        /*标题*/
-        .title {
-            font-size: 20px;
-            padding: $padding 0;
-            color: #333;
-        }
+        .imgWrap {
+            $padding: 15px;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            font-size: 15px;
+            color: #999;
+            line-height: 150%;
+            background-image: linear-gradient(to bottom, rgba(#000, 0.05) 61%, #fff 0%);
 
-        /*来源和日期*/
-        .subTitle {
-            $color: #bbb;
-            color: $color;
-            font-size: 14px;
-            line-height: 100%;
+            .img {
+                display: block;
+                max-width: 100%;
+                max-height: 60%;
+                min-height: 200px;
+                margin: 0 auto;
+            }
 
-            & > span {
-                display: inline-block;
+            .imgInfo {
+                padding: $padding;
+                background: #fff;
+                min-height: 40%;
+            }
 
-                &:not(:first-of-type) {
-                    border-left: 1px solid $color;
-                    margin-left: 12px;
-                    padding: 0 12px;
+            /*页码指示*/
+            .indicator {
+                font-weight: 100;
+
+                span {
+                    font-size: 30px;
+                    color: #333;
                 }
             }
+
+            /*标题*/
+            .title {
+                font-size: 20px;
+                padding: $padding 0;
+                color: #333;
+            }
+
+            /*来源和日期*/
+            .subTitle {
+                $color: #bbb;
+                color: $color;
+                font-size: 14px;
+                line-height: 100%;
+
+                & > span {
+                    display: inline-block;
+
+                    &:not(:first-of-type) {
+                        border-left: 1px solid $color;
+                        margin-left: 12px;
+                        padding: 0 12px;
+                    }
+                }
+            }
+
+            /*描述信息*/
+            .desc {
+                padding-top: $padding;
+                text-indent: 2em;
+            }
         }
 
-        /*描述信息*/
-        .desc {
-            padding-top: $padding;
-            text-indent: 2em;
+        /*缩略图*/
+        .thumbWrap {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: $thumbHeight;
+            white-space: nowrap;
+            overflow-y: hidden;
+            overflow-x: auto;
         }
-    }
 
-    /*缩略图*/
-    .thumbWrap {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: $thumbHeight;
-        white-space: nowrap;
-        overflow-y: hidden;
-        overflow-x: auto;
-    }
+        .thumb {
+            width: 60px;
+            height: 100%;
+            background: center center;
+            background-size: cover;
+            display: inline-block;
+            &:not(:last-of-type) {
+                border-left: 1px solid #fff;
+            }
+            &.selected {
+                border: 2px solid #06f;
 
-    .thumb {
-        width: 60px;
-        height: 100%;
-        background: center center;
-        background-size: cover;
-        display: inline-block;
-        &:not(:last-of-type) {
-            border-left: 1px solid #fff;
-        }
-        &.selected {
-            border: 2px solid #06f;
-
-            & + .thumb {
-                border: none;
+                & + .thumb {
+                    border: none;
+                }
             }
         }
     }

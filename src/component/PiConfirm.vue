@@ -30,11 +30,12 @@
         background: rgba(#000, 0.3);
         /*动画*/
         transition: all 0.3s ease;
-        z-index: -1;
+        visibility: hidden;
         opacity: 0;
 
         /*显示*/
         &.visible {
+            visibility: visible;
             z-index: 999;
             opacity: 1;
 
@@ -98,50 +99,50 @@
     props: {
       // 宽度
       width: {
-        default: '280px'
+        default: '280px',
       },
       // 标题
       title: {
-        default: '提示'
+        default: '提示',
       },
       // 确定按钮文案
       btnOkText: {
-        default: '确定'
+        default: '确定',
       },
       // 确定按钮点击事件
       btnOkClick: {
-        default: null
+        default: null,
       },
       // 取消按钮文案
       btnCancelText: {
-        default: '取消'
+        default: '取消',
       },
       // 取消按钮点击事件
       btnCancelClick: {
-        default: null
+        default: null,
       },
       // 是否添加到全局变量
       isGlobal: {
-        default: false
-      }
+        default: false,
+      },
     },
     data() {
       return {
         msg: '',
-        visible: false
+        visible: false,
       };
     },
     computed: {
       _class() {
         return {
-          visible: this.visible
+          visible: this.visible,
         };
       },
       _boxStyle() {
         return {
-          width: this.width
+          width: this.width,
         };
-      }
+      },
     },
     created() {
       // 初始配置
@@ -166,7 +167,7 @@
         this.visible = false;
         const { btnCancelClick } = this;
         typeof btnCancelClick === 'function' && btnCancelClick();
-      }
-    }
+      },
+    },
   };
 </script>

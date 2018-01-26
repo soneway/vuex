@@ -130,53 +130,53 @@
     props: {
       // 宽度
       width: {
-        default: '100%'
+        default: '100%',
       },
       // 高度
       height: {
-        default: '100%'
+        default: '100%',
       },
       // 列表数据
       dataList: {
-        default: []
+        default: [],
       },
       // 滑动距离阈值
       swipSpanThreshold: {
-        default: 6
+        default: 6,
       },
       // 滑动阈值
       swipThreshold: {
-        default: 50
+        default: 50,
       },
       // 动画时长(该时长,需要和动画时长相同)
       duration: {
-        default: 400
+        default: 400,
       },
       // first和last拉不动的比率
       pullRatio: {
-        default: 2
+        default: 2,
       },
       // 是否循环滚动
       isLoop: {
-        default: true
+        default: true,
       },
       // 默认滚动索引
       index: {
-        default: 0
+        default: 0,
       },
       // 是否显示页脚
       isShowPager: {
-        default: true
+        default: true,
       },
       // 是否显示loading
       isShowLoading: {
-        default: true
+        default: true,
       },
       // 自动播放间隔
       autoPlayTimeout: {
         // 默认为0,表示禁用自动播放
-        default: 0
-      }
+        default: 0,
+      },
     },
     data() {
       return {
@@ -189,7 +189,7 @@
         currentIndex: this.index,
         nextIndex: this.index + 1,
         // 滑动值
-        currentTranslate: 0
+        currentTranslate: 0,
       };
     },
     computed: {
@@ -227,30 +227,30 @@
       _class() {
         return {
           'pi-loading': this.isShowLoading,
-          'pi-animating': this.isAnimating
+          'pi-animating': this.isAnimating,
         };
       },
       _style() {
         return {
           width: this.width,
-          height: this.height
+          height: this.height,
         };
       },
       _wrapStyle() {
         return {
-          transform: `translate3d(${this.currentTranslate},0,0)`
+          transform: `translate3d(${this.currentTranslate},0,0)`,
         };
       },
       _prevClass() {
         return {
-          'temp-current': this.isAnimating && this.direction === BACK
+          'temp-current': this.isAnimating && this.direction === BACK,
         };
       },
       _nextClass() {
         return {
-          'temp-current': this.isAnimating && this.direction === FORWARD
+          'temp-current': this.isAnimating && this.direction === FORWARD,
         };
-      }
+      },
     },
     watch: {
       currentData() {
@@ -265,7 +265,7 @@
         const { currentIndex } = this;
         this.prevIndex = currentIndex - 1;
         this.nextIndex = currentIndex + 1;
-      }
+      },
     },
     mounted() {
       this.startInter();
@@ -474,7 +474,7 @@
       // 获取图片样式
       getImgStyle(data) {
         return data && { backgroundImage: `url(${data})` };
-      }
-    }
+      },
+    },
   };
 </script>
