@@ -159,7 +159,7 @@
 </style>
 
 <script>
-  import PiCarousel from '../component/PiCarousel.vue';
+  import PiCarousel from '../components/PiCarousel.vue';
   import data from '../data/data.json';
 
   export default {

@@ -30,9 +30,9 @@
 </style>
 
 <script>
-  import PiAlert from '../component/PiAlert.vue';
-  import PiTooltip from '../component/PiTooltip.vue';
-  import PiConfirm from '../component/PiConfirm.vue';
+  import PiAlert from '../components/PiAlert.vue';
+  import PiTooltip from '../components/PiTooltip.vue';
+  import PiConfirm from '../components/PiConfirm.vue';
 
   export default {
     components: {

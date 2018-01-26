@@ -23,7 +23,7 @@
 </style>
 
 <script>
-  import Header from './component/common/Header.vue';
+  import Header from './components/common/Header.vue';
 
   export default {
     components: {

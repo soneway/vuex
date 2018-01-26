@@ -13,7 +13,7 @@
 </style>
 
 <script>
-  import PiCard from '../component/PiCard.vue';
+  import PiCard from '../components/PiCard.vue';
 
   export default {
     components: {

@@ -31,7 +31,7 @@
 </style>
 
 <script>
-  import PiSlider from '../component/PiSlider.vue';
+  import PiSlider from '../components/PiSlider.vue';
 
   export default {
     components: {
