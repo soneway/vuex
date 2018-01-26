@@ -1,7 +1,7 @@
 <template>
     <div class="view carousel">
         <PiCarousel ref="carousel"
-            :dataList="dataList">
+            :dataList="images">
         </PiCarousel>
     </div>
 </template>
@@ -13,8 +13,8 @@
 </style>
 
 <script>
+  import { mapState, mapActions } from 'vuex';
   import PiCarousel from '../components/PiCarousel.vue';
-  import request from '../script/request';
 
   export default {
     components: {
@@ -29,19 +29,22 @@
       this.initImgs();
       this.initEvent();
     },
+    computed: {
+      ...(mapState([
+        'images',
+      ])),
+    },
     methods: {
-      async initImgs() {
-        const imgs = await request.getImgs();
-        if (!imgs) {
-          return console.log('网络请求失败');
-        }
-        this.dataList = imgs;
+      ...(mapActions([
+        'getImages',
+      ])),
+      initImgs() {
+        this.getImages();
       },
       initEvent() {
-        this.$refs.carousel.$on('slide', async (index, direction) => {
-          if (index === this.dataList.length - 1 && direction === -1) {
-            const imgs = await request.getImgs();
-            imgs && this.dataList.push(...imgs);
+        this.$refs.carousel.$on('slide', (index, direction) => {
+          if (index === this.images.length - 1 && direction === -1) {
+            this.getImages();
           }
         });
       },

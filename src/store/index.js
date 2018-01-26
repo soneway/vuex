@@ -5,7 +5,9 @@ import mutations from './mutations';
 
 Vue.use(Vuex);
 
-const state = {};
+const state = {
+  images: [],
+};
 
 export default new Vuex.Store({
   state,
