@@ -30,14 +30,14 @@
       this.initEvent();
     },
     computed: {
-      ...(mapState([
+      ...mapState([
         'images',
-      ])),
+      ]),
     },
     methods: {
-      ...(mapActions([
+      ...mapActions([
         'getImages',
-      ])),
+      ]),
       initImgs() {
         this.getImages();
       },
