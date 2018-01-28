@@ -2,7 +2,9 @@
     <div class="body index">
         <Header></Header>
         <div class="main">
-            <router-view />
+            <transition name="fade">
+                <router-view />
+            </transition>
         </div>
     </div>
 </template>
@@ -18,7 +20,25 @@
         .main {
             flex: 1;
             z-index: 0;
+            position: relative;
+
+            .view {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 0;
+                bottom: 0;
+            }
         }
+    }
+
+    .fade-enter-active, .fade-leave-active {
+        transition: opacity .3s;
+    }
+
+    .fade-enter, .fade-leave-to
+    {
+        opacity: 0;
     }
 </style>
 
