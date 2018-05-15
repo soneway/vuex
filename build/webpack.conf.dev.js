@@ -16,6 +16,7 @@ module.exports = merge(baseConf, {
   },
   devServer: {
     hot: true,
+    contentBase: '../dev',
   },
   module: {
     loaders: [
@@ -36,7 +37,7 @@ module.exports = merge(baseConf, {
       },
     ],
   },
-  devtool: 'source-map',
+  devtool: 'eval-source-map',
   plugins: [
     ...templatePlugins,
   ],
