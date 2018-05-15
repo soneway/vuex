@@ -1,15 +1,15 @@
 <template>
-    <div class="view carousel">
-        <PiCarousel ref="carousel"
-            :dataList="images">
-        </PiCarousel>
-    </div>
+  <div class="view carousel">
+    <PiCarousel ref="carousel"
+      :dataList="images">
+    </PiCarousel>
+  </div>
 </template>
 
 <style lang="scss">
-    .carousel {
-        height: 100%;
-    }
+  .carousel {
+    height: 100%;
+  }
 </style>
 
 <script>

@@ -1,34 +1,34 @@
 <template>
-    <div class="pi-tooltip"
-        :class="_class"
-        :style="_style"
-        v-html="msg">
-    </div>
+  <div class="pi-tooltip"
+    :class="_class"
+    :style="_style"
+    v-html="msg">
+  </div>
 </template>
 
 <style lang="scss">
-    .pi-tooltip {
-        position: fixed;
-        top: 80%;
-        left: 50%;
-        box-sizing: border-box;
-        background: rgba(#000, 0.5);
-        color: #fff;
-        line-height: 120%;
-        padding: 0.6em 1em;
-        text-align: center;
-        border-radius: 0.5em;
-        /*动画*/
-        transition: all 0.3s ease;
-        z-index: -1;
-        opacity: 0;
+  .pi-tooltip {
+    position: fixed;
+    top: 80%;
+    left: 50%;
+    box-sizing: border-box;
+    background: rgba(#000, 0.5);
+    color: #fff;
+    line-height: 120%;
+    padding: 0.6em 1em;
+    text-align: center;
+    border-radius: 0.5em;
+    /*动画*/
+    transition: all 0.3s ease;
+    z-index: -1;
+    opacity: 0;
 
-        /*显示*/
-        &.visible {
-            z-index: 999;
-            opacity: 1;
-        }
+    /*显示*/
+    &.visible {
+      z-index: 999;
+      opacity: 1;
     }
+  }
 </style>
 
 <script>
@@ -56,7 +56,7 @@
     },
     computed: {
       _style() {
-        const { width } = this;
+        const {width} = this;
         return {
           width,
           marginLeft: `${-parseInt(width, 10) / 2}px`,

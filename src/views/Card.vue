@@ -1,15 +1,15 @@
 <template>
-    <div class="view card">
-        <PiCard :dataList="dataList">
-        </PiCard>
-    </div>
+  <div class="view card">
+    <PiCard :dataList="dataList">
+    </PiCard>
+  </div>
 </template>
 
 <style lang="scss">
-    .card {
-        height: 100%;
-        overflow: hidden;
-    }
+  .card {
+    height: 100%;
+    overflow: hidden;
+  }
 </style>
 
 <script>

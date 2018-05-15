@@ -1,99 +1,99 @@
 <template>
-    <div class="pi-slider"
-        :class="_class"
-        :style="_style"
-        @touchstart="__touchstart"
-        @touchmove="__touchmove"
-        @touchend="__touchend">
+  <div class="pi-slider"
+    :class="_class"
+    :style="_style"
+    @touchstart="__touchstart"
+    @touchmove="__touchmove"
+    @touchend="__touchend">
 
-        <!--滚动容器-->
-        <div class="pi-wrap"
-            :style="_wrapStyle"
-            @click="__wrapClick">
-            <slot :self="this" />
-        </div>
-        <!--滚动容器 end-->
-
-        <!--页脚-->
-        <div class="pi-pager"
-            v-if="isShowPager">
-            <slot name="pager" :self="this">
-                <span v-for="(_, index) in items"
-                    @click="__pagerClick(index)"
-                    :class="{selected: index === currentIndex}"></span>
-            </slot>
-        </div>
-        <!--页脚 end-->
+    <!--滚动容器-->
+    <div class="pi-wrap"
+      :style="_wrapStyle"
+      @click="__wrapClick">
+      <slot :self="this" />
     </div>
+    <!--滚动容器 end-->
+
+    <!--页脚-->
+    <div class="pi-pager"
+      v-if="isShowPager">
+      <slot name="pager" :self="this">
+                <span v-for="(_, index) in items"
+                  @click="__pagerClick(index)"
+                  :class="{selected: index === currentIndex}"></span>
+      </slot>
+    </div>
+    <!--页脚 end-->
+  </div>
 </template>
 
 <style lang="scss">
-    @import "../style/lib/loading";
+  @import "../style/lib/loading";
 
-    .pi-slider {
+  .pi-slider {
+    overflow: hidden;
+    position: relative;
+    /*优化滚动效果*/
+    backface-visibility: hidden;
+
+    /*没有动画*/
+    &.notrans {
+      .pi-wrap {
+        transition: none;
+      }
+    }
+    /*loading*/
+    &.pi-loading {
+      .pi-wrap > * {
+        @extend .loading;
+      }
+    }
+    /*水平方向*/
+    &.horizontal {
+      .pi-wrap {
+        height: 100%;
+        flex-direction: row;
+
+        & > * {
+          height: 100%;
+        }
+      }
+    }
+
+    .pi-wrap {
+      width: 100%;
+      transition: transform ease;
+      display: flex;
+      flex-direction: column;
+
+      & > * {
+        display: block;
+        flex: 1;
         overflow: hidden;
         position: relative;
-        /*优化滚动效果*/
-        backface-visibility: hidden;
-
-        /*没有动画*/
-        &.notrans {
-            .pi-wrap {
-                transition: none;
-            }
-        }
-        /*loading*/
-        &.pi-loading {
-            .pi-wrap > * {
-                @extend .loading;
-            }
-        }
-        /*水平方向*/
-        &.horizontal {
-            .pi-wrap {
-                height: 100%;
-                flex-direction: row;
-
-                & > * {
-                    height: 100%;
-                }
-            }
-        }
-
-        .pi-wrap {
-            width: 100%;
-            transition: transform ease;
-            display: flex;
-            flex-direction: column;
-
-            & > * {
-                display: block;
-                flex: 1;
-                overflow: hidden;
-                position: relative;
-            }
-        }
-
-        .pi-pager {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            text-align: center;
-            font-size: 0;
-            line-height: 20px;
-
-            & > span {
-                border: 3px solid #bbb;
-                border-radius: 50%;
-                margin: 0 2px;
-
-                &.selected {
-                    border-color: #555;
-                }
-            }
-        }
+      }
     }
+
+    .pi-pager {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      text-align: center;
+      font-size: 0;
+      line-height: 20px;
+
+      & > span {
+        border: 3px solid #bbb;
+        border-radius: 50%;
+        margin: 0 2px;
+
+        &.selected {
+          border-color: #555;
+        }
+      }
+    }
+  }
 </style>
 
 <script>
@@ -175,8 +175,8 @@
         };
       },
       _wrapStyle() {
-        const { currentTranslate, currentIndex, isHorizontal, $el, items } = this;
-        let { swipSpan } = this;
+        const {currentTranslate, currentIndex, isHorizontal, $el, items} = this;
+        let {swipSpan} = this;
         const itemCount = items.length;
 
         let translate;
@@ -231,7 +231,7 @@
     methods: {
       // 初始化slots
       initSlots() {
-        const { $el, currentIndex } = this;
+        const {$el, currentIndex} = this;
 
         // 遍历
         this.items.forEach((item, index) => {
@@ -297,7 +297,7 @@
         }
       },
       __touchend() {
-        const { swipSpan, swipThreshold, items, currentIndex } = this;
+        const {swipSpan, swipThreshold, items, currentIndex} = this;
         const itemCount = items.length;
 
         // 向右,下
@@ -340,7 +340,7 @@
       },
       // 开始定时器
       startInter() {
-        const { autoPlayTimeout } = this;
+        const {autoPlayTimeout} = this;
         const itemCount = this.items.length;
 
         // 自动播放开启

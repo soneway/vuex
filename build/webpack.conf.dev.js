@@ -14,10 +14,7 @@ module.exports = merge(baseConf, {
     path: path.join(__dirname, '../dev'),
     filename: '[name].js',
   },
-  devServer: {
-    hot: true,
-    contentBase: '../dev',
-  },
+  devServer: {},
   module: {
     loaders: [
       // 图片处理

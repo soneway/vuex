@@ -1,85 +1,85 @@
 <template>
-    <div class="pi-alert"
-        :class="_class">
-        <div class="pi-box"
-            :style="_boxStyle">
-            <h3 class="pi-title" v-html="title"></h3>
-            <p class="pi-msg" v-html="msg"></p>
-            <div class="pi-btn-wrap">
-                <a class="pi-btn-ok"
-                    @click="__btnOkClick">{{btnOkText}}</a>
-            </div>
-        </div>
+  <div class="pi-alert"
+    :class="_class">
+    <div class="pi-box"
+      :style="_boxStyle">
+      <h3 class="pi-title" v-html="title"></h3>
+      <p class="pi-msg" v-html="msg"></p>
+      <div class="pi-btn-wrap">
+        <a class="pi-btn-ok"
+          @click="__btnOkClick">{{btnOkText}}</a>
+      </div>
     </div>
+  </div>
 </template>
 
 <style lang="scss">
-    .pi-alert {
-        position: fixed;
-        left: 0;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        display: flex;
-        /*垂直居中*/
-        align-items: center;
-        /*水平居中*/
-        justify-content: center;
-        background: rgba(#000, 0.3);
-        /*动画*/
-        transition: all 0.3s ease;
-        visibility: hidden;
-        opacity: 0;
+  .pi-alert {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    /*垂直居中*/
+    align-items: center;
+    /*水平居中*/
+    justify-content: center;
+    background: rgba(#000, 0.3);
+    /*动画*/
+    transition: all 0.3s ease;
+    visibility: hidden;
+    opacity: 0;
 
-        /*显示*/
-        &.visible {
-            visibility: visible;
-            z-index: 999;
-            opacity: 1;
+    /*显示*/
+    &.visible {
+      visibility: visible;
+      z-index: 999;
+      opacity: 1;
 
-            .pi-box {
-                transform: none;
-            }
-        }
-
-        .pi-box {
-            background: rgba(#fff, 0.8);
-            text-align: center;
-            border-radius: 0.8em;
-            overflow: hidden;
-            /*动画*/
-            transition: transform 0.3s ease;
-            transform: scale3d(1.2, 1.2, 1);
-        }
-
-        .pi-title {
-            line-height: 250%;
-            background: rgba(#fff, 0.3);
-            box-shadow: 0 0 20px rgba(#000, 0.03);
-            font-size: 1.2em;
-        }
-
-        .pi-msg {
-            padding: 1.5em 3em;
-            line-height: 120%;
-        }
-
-        .pi-btn-wrap {
-            line-height: 280%;
-            box-shadow: 0 0 1px rgba(#000, 0.2);
-            color: #08f;
-            font-size: 1.15em;
-            display: flex;
-
-            & > a {
-                flex: 1;
-
-                &:active {
-                    background: rgba(#000, 0.04);
-                }
-            }
-        }
+      .pi-box {
+        transform: none;
+      }
     }
+
+    .pi-box {
+      background: rgba(#fff, 0.8);
+      text-align: center;
+      border-radius: 0.8em;
+      overflow: hidden;
+      /*动画*/
+      transition: transform 0.3s ease;
+      transform: scale3d(1.2, 1.2, 1);
+    }
+
+    .pi-title {
+      line-height: 250%;
+      background: rgba(#fff, 0.3);
+      box-shadow: 0 0 20px rgba(#000, 0.03);
+      font-size: 1.2em;
+    }
+
+    .pi-msg {
+      padding: 1.5em 3em;
+      line-height: 120%;
+    }
+
+    .pi-btn-wrap {
+      line-height: 280%;
+      box-shadow: 0 0 1px rgba(#000, 0.2);
+      color: #08f;
+      font-size: 1.15em;
+      display: flex;
+
+      & > a {
+        flex: 1;
+
+        &:active {
+          background: rgba(#000, 0.04);
+        }
+      }
+    }
+  }
 </style>
 
 <script>
@@ -132,7 +132,7 @@
     methods: {
       show(opts) {
         // 配置项
-        typeof opts === 'object' || (opts = { msg: opts });
+        typeof opts === 'object' || (opts = {msg: opts});
         // 配置项合并
         Object.assign(this, this.defaults, opts);
         // 显示
@@ -140,7 +140,7 @@
       },
       __btnOkClick() {
         this.visible = false;
-        const { btnOkClick } = this;
+        const {btnOkClick} = this;
         typeof btnOkClick === 'function' && btnOkClick();
       },
     },

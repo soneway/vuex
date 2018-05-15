@@ -1,125 +1,125 @@
 <template>
-    <div class="pi-carousel"
-        :class="_class"
-        :style="_style"
-        :data-direction="direction"
-        @touchstart="__touchstart"
-        @touchmove="__touchmove"
-        @touchend="__touchend">
+  <div class="pi-carousel"
+    :class="_class"
+    :style="_style"
+    :data-direction="direction"
+    @touchstart="__touchstart"
+    @touchmove="__touchmove"
+    @touchend="__touchend">
 
-        <!--滚动容器-->
-        <div class="pi-wrap"
-            :style="_wrapStyle"
-            @click="__wrapClick">
-            <div class="pi-item"
-                :class="_prevClass">
-                <slot v-if="prevData"
-                    :itemData="prevData"
-                    :index="prevIndex">
-                    <div class="pi-img"
-                        :style="getImgStyle(prevData)">
-                    </div>
-                </slot>
-            </div>
-            <div class="pi-item" ref="currentItem">
-                <slot v-if="currentData"
-                    :itemData="currentData"
-                    :index="currentIndex">
-                    <div class="pi-img"
-                        :style="getImgStyle(currentData)">
-                    </div>
-                </slot>
-            </div>
-            <div class="pi-item"
-                :class="_nextClass">
-                <slot v-if="nextData"
-                    :itemData="nextData"
-                    :index="nextIndex">
-                    <div class="pi-img"
-                        :style="getImgStyle(nextData)">
-                    </div>
-                </slot>
-            </div>
-        </div>
-        <!--滚动容器 end-->
-
-        <!--页脚-->
-        <div class="pi-pager"
-            v-if="isShowPager">
-            <slot name="pager" :self="this">
-                <span v-for="(_, index) in dataList"
-                    @click="__pagerClick(index)"
-                    :class="{selected: index === currentIndex}"></span>
-            </slot>
-        </div>
-        <!--页脚 end-->
+    <!--滚动容器-->
+    <div class="pi-wrap"
+      :style="_wrapStyle"
+      @click="__wrapClick">
+      <div class="pi-item"
+        :class="_prevClass">
+        <slot v-if="prevData"
+          :itemData="prevData"
+          :index="prevIndex">
+          <div class="pi-img"
+            :style="getImgStyle(prevData)">
+          </div>
+        </slot>
+      </div>
+      <div class="pi-item" ref="currentItem">
+        <slot v-if="currentData"
+          :itemData="currentData"
+          :index="currentIndex">
+          <div class="pi-img"
+            :style="getImgStyle(currentData)">
+          </div>
+        </slot>
+      </div>
+      <div class="pi-item"
+        :class="_nextClass">
+        <slot v-if="nextData"
+          :itemData="nextData"
+          :index="nextIndex">
+          <div class="pi-img"
+            :style="getImgStyle(nextData)">
+          </div>
+        </slot>
+      </div>
     </div>
+    <!--滚动容器 end-->
+
+    <!--页脚-->
+    <div class="pi-pager"
+      v-if="isShowPager">
+      <slot name="pager" :self="this">
+                <span v-for="(_, index) in dataList"
+                  @click="__pagerClick(index)"
+                  :class="{selected: index === currentIndex}"></span>
+      </slot>
+    </div>
+    <!--页脚 end-->
+  </div>
 </template>
 
 <style lang="scss">
-    @import "../style/lib/loading";
+  @import "../style/lib/loading";
 
-    .pi-carousel {
-        overflow: hidden;
-        position: relative;
-        /*可有效减缓闪烁*/
-        backface-visibility: hidden;
-        /*loading*/
-        &.pi-loading {
-            .pi-item {
-                @extend .loading;
-            }
-        }
-
-        /*正在动画*/
-        &.pi-animating {
-            .pi-wrap {
-                transition: transform ease 0.4s;
-            }
-        }
-
-        .pi-wrap {
-            width: 300%;
-            height: 100%;
-            margin-left: -100%;
-            display: flex;
-            /*虽然是默认值,但不能省略,以确保auto-prefixer插件准确生成兼容安卓4.0的代码*/
-            flex-direction: row;
-        }
-
-        .pi-item {
-            height: 100%;
-            flex: 1;
-            overflow: hidden;
-
-            .pi-img {
-                background: center center no-repeat;
-                background-size: contain;
-                width: 100%;
-                height: 100%;
-            }
-        }
-
-        .pi-pager {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            text-align: center;
-            font-size: 0;
-            line-height: 20px;
-
-            & > span {
-                border: 3px solid #bbb;
-                border-radius: 50%;
-                margin: 0 2px;
-
-                &.selected {
-                    border-color: #555;
-                }
-            }
-        }
+  .pi-carousel {
+    overflow: hidden;
+    position: relative;
+    /*可有效减缓闪烁*/
+    backface-visibility: hidden;
+    /*loading*/
+    &.pi-loading {
+      .pi-item {
+        @extend .loading;
+      }
     }
+
+    /*正在动画*/
+    &.pi-animating {
+      .pi-wrap {
+        transition: transform ease 0.4s;
+      }
+    }
+
+    .pi-wrap {
+      width: 300%;
+      height: 100%;
+      margin-left: -100%;
+      display: flex;
+      /*虽然是默认值,但不能省略,以确保auto-prefixer插件准确生成兼容安卓4.0的代码*/
+      flex-direction: row;
+    }
+
+    .pi-item {
+      height: 100%;
+      flex: 1;
+      overflow: hidden;
+
+      .pi-img {
+        background: center center no-repeat;
+        background-size: contain;
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .pi-pager {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      text-align: center;
+      font-size: 0;
+      line-height: 20px;
+
+      & > span {
+        border: 3px solid #bbb;
+        border-radius: 50%;
+        margin: 0 2px;
+
+        &.selected {
+          border-color: #555;
+        }
+      }
+    }
+  }
 </style>
 
 <script>
@@ -194,8 +194,8 @@
     },
     computed: {
       prevData() {
-        const { dataList } = this;
-        let { prevIndex } = this;
+        const {dataList} = this;
+        let {prevIndex} = this;
 
         // 第一帧前面
         if (prevIndex < 0) {
@@ -211,8 +211,8 @@
         return this.dataList[this.currentIndex];
       },
       nextData() {
-        const { dataList } = this;
-        let { nextIndex } = this;
+        const {dataList} = this;
+        let {nextIndex} = this;
 
         // 最后一帧后面
         if (nextIndex === dataList.length) {
@@ -255,14 +255,14 @@
     watch: {
       currentData() {
         // 重置scrollTop
-        const { currentItem } = this.$refs;
+        const {currentItem} = this.$refs;
         if (currentItem) {
           const wrapEl = currentItem.firstElementChild;
           wrapEl && (wrapEl.scrollTop = 0);
         }
       },
       currentIndex() {
-        const { currentIndex } = this;
+        const {currentIndex} = this;
         this.prevIndex = currentIndex - 1;
         this.nextIndex = currentIndex + 1;
       },
@@ -316,7 +316,7 @@
 
           // 不能循环滚动
           if (!this.isLoop) {
-            const { currentIndex } = this;
+            const {currentIndex} = this;
             // 第一张图或最后一张图
             if (currentIndex === 0 && swipSpanX > 0 ||
               currentIndex === this.dataList.length - 1 && swipSpanX < 0) {
@@ -337,7 +337,7 @@
           return;
         }
 
-        const { swipSpan, swipThreshold, currentIndex } = this;
+        const {swipSpan, swipThreshold, currentIndex} = this;
         let direction;
 
         // 向左
@@ -437,7 +437,7 @@
       },
       // 滑动到第几帧
       slideToIndex(index) {
-        const { currentIndex } = this;
+        const {currentIndex} = this;
         // index不符合条件
         if (typeof index !== 'number' || index < 0 || index >= this.dataList.length || index === currentIndex) {
           return;
@@ -460,7 +460,7 @@
       },
       // 开始定时器
       startInter() {
-        const { autoPlayTimeout } = this;
+        const {autoPlayTimeout} = this;
         if (autoPlayTimeout) {
           this.inter = setInterval(() => {
             this.slide(FORWARD);
@@ -473,7 +473,7 @@
       },
       // 获取图片样式
       getImgStyle(data) {
-        return data && { backgroundImage: `url(${data})` };
+        return data && {backgroundImage: `url(${data})`};
       },
     },
   };

@@ -1,32 +1,32 @@
 <template>
-    <div class="view msgbox">
-        <a @click="__alertClick">alert</a>
-        <a @click="__confirmClick">confirm</a>
-        <a @click="__tooltipClick">tooltip</a>
+  <div class="view msgbox">
+    <a @click="__alertClick">alert</a>
+    <a @click="__confirmClick">confirm</a>
+    <a @click="__tooltipClick">tooltip</a>
 
-        <PiAlert ref="alert" :isGlobal="true" />
-        <PiConfirm ref="confirm" :isGlobal="true" />
-        <PiTooltip ref="tooltip" :isGlobal="true" />
-    </div>
+    <PiAlert ref="alert" :isGlobal="true" />
+    <PiConfirm ref="confirm" :isGlobal="true" />
+    <PiTooltip ref="tooltip" :isGlobal="true" />
+  </div>
 </template>
 
 <style lang="scss">
-    .msgbox {
-        padding: 20px;
+  .msgbox {
+    padding: 20px;
 
-        & > a {
-            display: inline-block;
-            line-height: 200%;
-            padding: 0 1em;
-            border: 1px solid #09f;
-            color: #09f;
-            border-radius: 0.3em;
+    & > a {
+      display: inline-block;
+      line-height: 200%;
+      padding: 0 1em;
+      border: 1px solid #09f;
+      color: #09f;
+      border-radius: 0.3em;
 
-            &:active {
-                background: #eee;
-            }
-        }
+      &:active {
+        background: #eee;
+      }
     }
+  }
 </style>
 
 <script>
