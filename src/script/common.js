@@ -1,5 +1,5 @@
 // polyfill
-window.Promise = Promise;
+import 'babel-polyfill';
 
 // 扩展Object对象
 import '../script/lib/object';
