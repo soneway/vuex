@@ -7,7 +7,7 @@ const srcDir = path.join(__dirname, '../../src');
 function getEntry(entryDir = path.join(srcDir, '/entry')) {
   const files = fs.readdirSync(entryDir);
   return files.map((file) => path.join(entryDir, file))
-  // 过滤出.js文件
+    // 过滤出.js文件
     .filter((filePath) => {
       const stat = fs.statSync(filePath);
       return !stat.isDirectory() && filePath.endsWith('.js');
@@ -24,7 +24,7 @@ function getEntry(entryDir = path.join(srcDir, '/entry')) {
 function getTemplate(templateDir = srcDir) {
   const files = fs.readdirSync(templateDir);
   return files.map((file) => path.join(templateDir, file))
-  // 过滤出文件
+    // 过滤出文件
     .filter((filePath) => {
       const stat = fs.statSync(filePath);
       return !stat.isDirectory() && filePath.endsWith('.html');
@@ -35,12 +35,12 @@ function getTemplate(templateDir = srcDir) {
       return {
         filename: pathInfo.base,
         template: path.join(templateDir, pathInfo.base),
-        chunks: ['vendor', pathInfo.name]
+        chunks: ['vendor', pathInfo.name],
       };
     });
 }
 
 module.exports = {
   getTemplate,
-  getEntry
+  getEntry,
 };
