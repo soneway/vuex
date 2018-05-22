@@ -9,7 +9,7 @@ module.exports = {
     'html'
   ],
   globals: {
-    Vue: true
+    // Vue: true
   },
 
   rules: {

@@ -19,7 +19,7 @@ function get(pathname, data) {
 }
 
 // post请求函数
-function post(opts) {
+function post() {
 
 }
 

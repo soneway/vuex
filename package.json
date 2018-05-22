@@ -5,7 +5,11 @@
     "clean": "rimraf prod",
     "build:dev": "webpack --watch --config ./build/webpack.conf.dev.js",
     "build": "npm run clean && webpack --config ./build/webpack.conf.prod.js",
-    "dev": "webpack-dev-server --hot --open --config ./build/webpack.conf.dev.js"
+    "dev": "webpack-dev-server --hot --open --config ./build/webpack.conf.dev.js",
+    "lint": "eslint .",
+    "precommit": [
+      "lint"
+    ]
   },
   "dependencies": {
     "autoprefixer": "6.7.7",
@@ -35,6 +39,7 @@
     "eslint-plugin-import": "2.2.0",
     "eslint-plugin-jsx-a11y": "4.0.0",
     "eslint-plugin-react": "6.10.3",
+    "pre-commit": "^1.2.2",
     "webpack-dev-server": "^2.11.2"
   }
 }
